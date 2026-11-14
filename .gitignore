@@ -1,0 +1,6 @@
+# Copyrighted course documents (DZRSI/AJJF). Keep them local; never publish.
+source/
+
+# Scratch work and OS files
+temp/
+.DS_Store
