@@ -243,7 +243,7 @@ window.Atlas = window.Atlas || {};
       ${p.caut ? `<div class="caution"><b>Caution.</b> ${esc(p.caut)}</div>` : ""}
       ${p.combos && p.combos.length ? `<div class="d-section"><h4>Works with</h4>${p.combos.map((c) => `<div class="combo"><div>${ptLink(c.w)} <b>${esc(c.n)}</b></div><div class="muted" style="font-size:13.5px">${esc(c.t)}</div></div>`).join("")}</div>` : ""}
       <div class="d-section"><h4>Connection web</h4>${webSVG(p)}
-        <div class="legend"><span><i style="background:var(--accent)"></i>Pairing</span><span><i style="background:var(--muted)"></i>Related</span><span><i style="background:var(--fire)"></i>Kata</span><span><i style="background:var(--earth)"></i>Emotion</span><span><i style="background:var(--water)"></i>Channel / element</span></div></div>
+        <div class="legend"><span><i style="background:var(--accent)"></i>Pairing</span><span><i style="background:var(--muted)"></i>Related</span><span><i style="background:var(--fire)"></i>Kata</span><span><i style="background:var(--earth)"></i>Emotion</span><span><i style="background:var(--wood)"></i>Channel / element</span></div></div>
       ${ch ? `<div class="d-section"><h4>${esc(ch.name)} channel</h4><p style="margin:0">${esc(ch.organ)}</p><p class="muted" style="margin:0">${esc(ch.surface)}.${ch.sinewStart ? ` Sinew channel: ${esc(ch.sinewStart)} to ${esc(ch.sinewEnd)}.` : ""}</p><div class="src">${esc(ch.ref)}</div></div>` : ""}`;
     const solo = $("#solo", box);
     if (solo) solo.addEventListener("click", () => { A.chans = new Set([p.ch]); refresh(); });
@@ -269,9 +269,9 @@ window.Atlas = window.Atlas || {};
     const add = (n) => { if (!nodes.some((m) => m.key === n.key) && nodes.length < 18) nodes.push(n); };
     if (p.ch) {
       const ch = Atlas.CHANNELS[p.ch];
-      add({ key: "ch" + p.ch, label: `${p.ch} channel`, ch: p.ch, color: "var(--water)", col: Atlas.elColor(p.ch) });
-      if (ch.el) add({ key: "el", label: Atlas.ELEMENTS[ch.el].name, view: "phases", color: "var(--water)", col: `var(${Atlas.ELEMENTS[ch.el].color})` });
-      if (ch.pair) add({ key: "ch" + ch.pair, label: `${ch.pair} (paired)`, ch: ch.pair, color: "var(--water)", col: Atlas.elColor(ch.pair) });
+      add({ key: "ch" + p.ch, label: `${p.ch} channel`, ch: p.ch, color: "var(--wood)", col: Atlas.elColor(p.ch) });
+      if (ch.el) add({ key: "el", label: Atlas.ELEMENTS[ch.el].name, view: "phases", color: "var(--wood)", col: `var(${Atlas.ELEMENTS[ch.el].color})` });
+      if (ch.pair) add({ key: "ch" + ch.pair, label: `${ch.pair} (paired)`, ch: ch.pair, color: "var(--wood)", col: Atlas.elColor(ch.pair) });
     }
     (p.combos || []).forEach((c) => Atlas.POINTS[c.w] && add({ key: c.w, label: code(c.w), sub: c.n, pt: c.w, color: "var(--accent)", col: Atlas.pointColor(Atlas.POINTS[c.w]) }));
     Object.values(Atlas.POINTS).forEach((q) => (q.combos || []).forEach((c) => c.w === p.id && add({ key: q.id, label: code(q.id), sub: c.n, pt: q.id, color: "var(--accent)", col: Atlas.pointColor(q) })));
