@@ -34,6 +34,14 @@ each one to the kata, the Five Phases, and the course's pain and emotion materia
   whole pool in shuffled order, then see your score and practice the points you
   missed. **Reset score** clears the counts and the saved best streak.
 
+- **Two Lenses.** A bridge for people trained in Western medicine:
+  - ground rules on what the system does and doesn't claim
+  - the habits of thought that shift between the two systems
+  - an interactive "translate a complaint" exercise that asks the questions an Eastern
+    practitioner asks
+  - muscles mapped to the channels that run over them
+  - familiar words that mean something different in TCM
+
 ## Running locally
 
 ```bash
