@@ -224,7 +224,7 @@ a.pt, button.pt {
 .web text { font: 500 9px var(--f-body); fill: var(--ink); }
 .web .node { cursor: pointer; }
 .web .node circle { stroke-width: 1.2; }
-.web .edge { fill: none; stroke-width: 1; opacity: 0.55; }
+.web .edge { fill: none; stroke-width: 1.4; opacity: 0.85; }
 .web .center-text { font: 600 12px var(--f-mono); }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--muted); }
 .legend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 4px; }
