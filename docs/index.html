@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Chuden Point Atlas</title>
+  <meta name="description" content="An interactive study atlas of the acupoints, channels, kata and Five Phases from the DZRSI Chuden Ichi program.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Shippori+Mincho+B1:wght@600;700&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="seal" aria-hidden="true">経穴</span>
+      <div>
+        <h1>Chuden Point Atlas</h1>
+        <p>Points, channels and the kata of the Chuden Ichi program</p>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Views">
+      <a href="#atlas">Atlas</a>
+      <a href="#kata">Kata</a>
+      <a href="#clock">Body Clock</a>
+      <a href="#phases">Five Phases</a>
+      <a href="#depth">Depth &amp; Pain</a>
+      <a href="#study">Study</a>
+    </nav>
+    <button class="theme-btn" id="theme" type="button">Theme: auto</button>
+  </header>
+
+  <main>
+    <section class="view" id="view-atlas" aria-label="Atlas"></section>
+    <section class="view" id="view-kata" aria-label="Kata walkthrough"></section>
+    <section class="view" id="view-clock" aria-label="Body clock"></section>
+    <section class="view" id="view-phases" aria-label="Five Phases"></section>
+    <section class="view" id="view-depth" aria-label="Depth and pain"></section>
+    <section class="view" id="view-study" aria-label="Study"></section>
+  </main>
+
+  <footer class="foot">
+    A personal study aid for the Chuden Ichi program. It summarizes the course material in its own words with page references, and labels anything
+    from general Traditional Chinese Medicine that the course does not cover. It is not medical advice and does not replace the handbook, your instructors,
+    or palpation. Follow the handbook's contraindications and refer clients to a medical provider when in doubt.
+  </footer>
+
+  <script src="js/data/channels.js"></script>
+  <script src="js/data/points-1.js"></script>
+  <script src="js/data/points-2.js"></script>
+  <script src="js/data/kata.js"></script>
+  <script src="js/data/theory.js"></script>
+  <script src="js/body.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/views.js"></script>
+  <script src="js/study.js"></script>
+</body>
+</html>
