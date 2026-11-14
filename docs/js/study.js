@@ -26,6 +26,15 @@ Atlas.views = Atlas.views || {};
     return words.reduce((t, w) => t.replace(new RegExp(`\\b${w}\\b`, "gi"), "____"), text);
   }
 
+  /* Hide a channel's names too, for Channel questions. */
+  function maskChannel(text, code) {
+    const ch = Atlas.CHANNELS[code];
+    const words = [ch.name, code, ...(ch.alias || "").split(/[\/,]/), ...ch.name.split(" ").filter((w) => w.length > 4)]
+      .map((w) => w.trim()).filter(Boolean).sort((a, b) => b.length - a.length)
+      .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    return words.reduce((t, w) => t.replace(new RegExp(`\\b${w}\\b`, "gi"), "____"), text);
+  }
+
   Atlas.views.study = function () {
     const root = $("#view-study");
     const S = {
@@ -93,7 +102,12 @@ Atlas.views = Atlas.views || {};
       figs.forEach((f) => f.svg.querySelectorAll(".pt-label").forEach((t) => (t.style.display = "")));
       figs.forEach((f) => { f.clearOverlay(); f.select(null); f.highlight([], []); f.zoomTo(Atlas.REGIONS.full, false); });
       $("#study-figs").hidden = false;
-      figs.forEach((f) => { f.setLabels(false); f.svg.classList.toggle("hide-off", S.mode === "locate" || S.mode === "function"); });
+      figs.forEach((f) => {
+        f.setLabels(false);
+        f.svg.classList.toggle("hide-off", S.mode !== "name");
+        /* In Channel questions the dot's element color would hint at the answer, so it stays neutral until answered. */
+        f.svg.classList.toggle("neutral-pts", S.mode === "channel");
+      });
       if (S.mode === "locate") {
         figs.forEach((f) => { f.filterPoints(() => false); f.setLayer("primary"); f.showChannels(new Set()); });
         q.prompt = `Where is <b class="mono">${esc(Atlas.code(p.id))}</b>?`;
@@ -120,10 +134,19 @@ Atlas.views = Atlas.views || {};
         const chs = [...new Set(ids.map((id) => Atlas.POINTS[id].ch).filter(Boolean))];
         figs.forEach((g) => { g.filterPoints((x) => ids.includes(x.id)); g.showChannels(new Set(chs)); g.setLabels(true); });
       } else {
-        $("#study-figs").hidden = true;
-        q.prompt = `Which channel is <b class="mono">${esc(Atlas.code(p.id))}</b> (${esc(p.en)}) on?`;
+        /* The point's code names its channel, so the question uses its pinyin and English names instead. */
+        q.prompt = `Which channel is <b>${esc(p.py)}</b> (${esc(p.en)}) on?`;
         const chs = shuffle(Object.keys(Atlas.CHANNELS).filter((c) => c !== p.ch)).slice(0, 3);
-        q.opts = shuffle([p.ch, ...chs]).map((c) => ({ ok: c === p.ch, label: `${Atlas.CHANNELS[c].name}${Atlas.CHANNELS[c].el ? ` (${Atlas.ELEMENTS[Atlas.CHANNELS[c].el].name})` : ""}` }));
+        q.opts = shuffle([p.ch, ...chs]).map((c) => ({ ok: c === p.ch, ch: c, label: `${Atlas.CHANNELS[c].name}${Atlas.CHANNELS[c].el ? ` (${Atlas.ELEMENTS[Atlas.CHANNELS[c].el].name})` : ""}` }));
+        const notes = shuffle([...(p.course || []).map((c) => c.t), ...p.fx].filter((t) => t.length > 18));
+        q.clues = [`Location: ${p.loc}`, ...notes].map((t) => maskChannel(mask(t, p), p.ch));
+        q.shown = Math.min(2, q.clues.length);
+        q.sub = "The point is marked on the body with the four candidate channels drawn. Hover an answer to trace that channel.";
+        figs.forEach((g) => {
+          g.filterPoints((x) => x.id === p.id);
+          g.showChannels(new Set(q.opts.map((o) => o.ch)));
+          if (g.ptGroups[p.id]) g.ptGroups[p.id].querySelectorAll(".pt-label").forEach((t) => (t.style.display = "none"));
+        });
       }
       S.q = q;
       renderCard();
@@ -169,8 +192,9 @@ Atlas.views = Atlas.views || {};
       score(o.ok);
       S.q.picked = i;
       S.q.fb = { ok: o.ok, t: o.ok ? "Correct." : `It was ${S.q.opts.find((x) => x.ok).label}.` };
-      if (S.mode === "function") figs.forEach((f) => { f.select(S.q.p.id); f.highlight(S.q.p.ch ? [S.q.p.ch] : [], [S.q.p.id]); });
-      if (S.mode === "name") figs.forEach((f) => f.ptGroups && f.ptGroups[S.q.p.id] && f.ptGroups[S.q.p.id].querySelectorAll(".pt-label").forEach((t) => t.style.display = ""));
+      figs.forEach((f) => f.svg.classList.remove("neutral-pts"));
+      if (S.mode === "function" || S.mode === "channel") figs.forEach((f) => { f.select(S.q.p.id); f.highlight(S.q.p.ch ? [S.q.p.ch] : [], [S.q.p.id]); });
+      if (S.mode === "name" || S.mode === "channel") figs.forEach((f) => f.ptGroups && f.ptGroups[S.q.p.id] && f.ptGroups[S.q.p.id].querySelectorAll(".pt-label").forEach((t) => t.style.display = ""));
       renderCard();
     }
 
@@ -198,10 +222,12 @@ Atlas.views = Atlas.views || {};
       $("#quiz").querySelectorAll("[data-o]").forEach((b) => {
         b.addEventListener("click", () => answerOpt(Number(b.dataset.o)));
         const o = q.opts[Number(b.dataset.o)];
-        if (S.mode !== "function" || S.answered || !o.id) return;
-        b.addEventListener("mouseenter", () => figs.forEach((f) => f.highlight([], [o.id])));
+        if (S.answered || !(o.id || o.ch)) return;
+        /* Function answers light up a candidate point; Channel answers trace a candidate channel. */
+        const on = () => figs.forEach((f) => (o.id ? f.highlight([], [o.id]) : f.highlight([o.ch], [q.p.id])));
+        b.addEventListener("mouseenter", on);
+        b.addEventListener("focus", on);
         b.addEventListener("mouseleave", () => figs.forEach((f) => f.highlight([], [])));
-        b.addEventListener("focus", () => figs.forEach((f) => f.highlight([], [o.id])));
       });
       const clue = $("#q-clue");
       if (clue) clue.addEventListener("click", () => { q.shown++; renderCard(); });

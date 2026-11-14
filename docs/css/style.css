@@ -186,6 +186,7 @@ a.pt, button.pt {
 .pt-g.sel .pt-ring { opacity: 1; stroke-width: 1.6; }
 .pt-g.off { opacity: 0.12; pointer-events: none; }
 .hide-off .pt-g.off { display: none; }
+.neutral-pts .pt-g { color: var(--ink) !important; } /* overrides the inline element color during Channel questions */
 .pt-g.hl .pt-dot { r: calc(4.6px * var(--k, 1)); }
 .pt-label { font: 600 calc(7px * var(--k, 1)) var(--f-mono); fill: var(--ink); paint-order: stroke; stroke: var(--surface); stroke-width: calc(2.4px * var(--k, 1)); pointer-events: none; opacity: 0; }
 .show-labels .pt-label, .pt-g.sel .pt-label, .pt-g.hl .pt-label, .pt-g:hover .pt-label { opacity: 1; }
