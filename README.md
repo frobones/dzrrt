@@ -30,6 +30,10 @@ each one to the kata, the Five Phases, and the course's pain and emotion materia
   - Function: pick the point that matches a description.
   - Channel: pick the channel a point belongs to.
 
+  Questions are random by default. Turn on **Every point once** to go through the
+  whole pool in shuffled order, then see your score and practice the points you
+  missed. **Reset score** clears the counts and the saved best streak.
+
 ## Running locally
 
 ```bash

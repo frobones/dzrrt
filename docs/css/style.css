@@ -286,6 +286,9 @@ a.pt, button.pt {
 .options button:hover:not(:disabled) { border-color: var(--ink); }
 .options button.right { border-color: var(--good); background: color-mix(in srgb, var(--good) 14%, var(--surface)); }
 .options button.wrong { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--surface)); }
+.clues { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.clues li { padding-left: 2px; }
+.clues li::marker { color: var(--muted); font-family: var(--f-mono); font-size: 12px; }
 .feedback { padding: 10px 12px; border-radius: 8px; background: var(--surface-2); }
 .feedback.ok { background: color-mix(in srgb, var(--good) 14%, var(--surface)); }
 .feedback.no { background: color-mix(in srgb, var(--bad) 12%, var(--surface)); }

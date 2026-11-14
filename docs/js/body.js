@@ -157,10 +157,12 @@ window.Atlas = window.Atlas || {};
         if (p.cats.includes("longlife")) cls.push("longlife");
         const g = el("g", { class: cls.join(" "), "data-id": id, style: `color:${Atlas.pointColor(p)}`, tabindex: "0", role: "button", "aria-label": `${p.code || id} ${p.en}` }, this.ptLayer);
         this.ptGroups[id] = g;
+        /* Points close to the midline label their left copy, so they don't collide with the outer lines. */
+        const labelAt = pos.length > 1 && p.v === this.view && p.dx > 0 && p.dx < 16 ? 1 : 0;
         pos.forEach(([x, y], i) => {
           el("circle", { cx: x, cy: y, r: 6.5, class: "pt-ring" }, g);
           el("circle", { cx: x, cy: y, r: 3.2, class: "pt-dot", stroke: "currentColor" }, g);
-          if (i === 0) {
+          if (i === labelAt) {
             const t = el("text", { x: x + (x >= CX ? 6 : -6), y: y - 5, class: "pt-label", "text-anchor": x >= CX ? "start" : "end" }, g);
             t.textContent = p.code || id;
           }
