@@ -4,6 +4,9 @@
  *   name     - name the highlighted point
  *   function - which point matches this description
  *   channel  - which channel a point belongs to
+ *
+ * Questions are random by default. Deck mode instead deals every point in the pool
+ * once, in shuffled order, and ends the round with a score and the points missed.
  */
 window.Atlas = window.Atlas || {};
 Atlas.views = Atlas.views || {};
@@ -25,9 +28,12 @@ Atlas.views = Atlas.views || {};
 
   Atlas.views.study = function () {
     const root = $("#view-study");
-    const S = { mode: "locate", course: true, q: null, right: 0, total: 0, streak: 0, best: Atlas.store.get("best", 0), answered: false };
+    const S = {
+      mode: "locate", course: true, q: null, right: 0, total: 0, streak: 0, best: Atlas.store.get("best", 0), answered: false,
+      deckMode: Atlas.store.get("deck", false), deck: [], deckSize: 0, round: { right: 0, missed: [] }, done: false,
+    };
     root.innerHTML = `
-      <p class="view-intro">Practice until the points feel obvious. Locate builds the map in your hands, Name and Channel build recall, and Function connects each point to what it does. Your best streak is saved in this browser.</p>
+      <p class="view-intro">Practice until the points feel obvious. Locate builds the map in your hands, Name and Channel build recall, and Function connects each point to what it does. Turn on <b>Every point once</b> to work through the whole pool without repeats. Your best streak is saved in this browser.</p>
       <div class="study">
         <div class="stage">
           <div class="stage-bar">
@@ -35,16 +41,31 @@ Atlas.views = Atlas.views || {};
               <button data-m="locate" aria-pressed="true">Locate</button><button data-m="name" aria-pressed="false">Name</button>
               <button data-m="function" aria-pressed="false">Function</button><button data-m="channel" aria-pressed="false">Channel</button>
             </div>
-            <label class="toggle"><input type="checkbox" id="study-course" checked> Course points only</label>
+            <div class="chips" style="align-items:center;gap:14px">
+              <label class="toggle"><input type="checkbox" id="study-course" checked> Course points only</label>
+              <label class="toggle"><input type="checkbox" id="study-deck"> Every point once</label>
+              <button class="btn ghost" id="study-reset" type="button">Reset score</button>
+            </div>
           </div>
           <div class="figures" id="study-figs"><div id="sf-front"></div><div id="sf-back"></div></div>
         </div>
         <aside class="panel quiz-card" id="quiz"></aside>
       </div>`;
     const onBg = (x, y, fig) => answerLocate(x, y, fig);
-    const figs = [new Atlas.Figure($("#sf-front"), "front", { onBackground: onBg }), new Atlas.Figure($("#sf-back"), "back", { onBackground: onBg })];
+    const figs = [new Atlas.Figure($("#sf-front"), "front", { onBackground: onBg, onPoint: (id) => answerPoint(id) }),
+      new Atlas.Figure($("#sf-back"), "back", { onBackground: onBg, onPoint: (id) => answerPoint(id) })];
 
-    const pool = () => Object.values(Atlas.POINTS).filter((p) => !S.course || Atlas.isCourse(p));
+    /* Channel questions need a channel, so extra points sit that mode out. */
+    const pool = () => Object.values(Atlas.POINTS).filter((p) => (!S.course || Atlas.isCourse(p)) && (S.mode !== "channel" || p.ch));
+
+    /* Start a fresh deck from the current pool, or from a given list of point ids. */
+    function newRound(ids) {
+      S.deck = shuffle(ids ? ids.slice() : pool().map((p) => p.id));
+      S.deckSize = S.deck.length;
+      S.round = { right: 0, missed: [] };
+      S.done = false;
+      S.q = null;
+    }
     function distractors(p, n, key) {
       const others = shuffle(pool().filter((q) => q.id !== p.id && key(q) !== key(p)));
       const seen = new Set([key(p)]), out = [];
@@ -52,16 +73,27 @@ Atlas.views = Atlas.views || {};
       return out;
     }
 
-    function next() {
+    function pick() {
+      if (S.deckMode) {
+        /* A skipped point goes to the back of the deck so the round still covers it. */
+        if (S.q && !S.answered) S.deck.push(S.q.p.id);
+        return S.deck.length ? Atlas.POINTS[S.deck.shift()] : null;
+      }
       const ps = pool();
       let p = ps[Math.floor(Math.random() * ps.length)];
       if (S.q && ps.length > 1) while (p.id === S.q.p.id) p = ps[Math.floor(Math.random() * ps.length)];
+      return p;
+    }
+
+    function next() {
+      const p = pick();
+      if (!p) return renderSummary();
       S.answered = false;
       const q = { p };
       figs.forEach((f) => f.svg.querySelectorAll(".pt-label").forEach((t) => (t.style.display = "")));
       figs.forEach((f) => { f.clearOverlay(); f.select(null); f.highlight([], []); f.zoomTo(Atlas.REGIONS.full, false); });
       $("#study-figs").hidden = false;
-      figs.forEach((f) => f.svg.classList.toggle("hide-off", S.mode === "locate"));
+      figs.forEach((f) => { f.setLabels(false); f.svg.classList.toggle("hide-off", S.mode === "locate" || S.mode === "function"); });
       if (S.mode === "locate") {
         figs.forEach((f) => { f.filterPoints(() => false); f.setLayer("primary"); f.showChannels(new Set()); });
         q.prompt = `Where is <b class="mono">${esc(Atlas.code(p.id))}</b>?`;
@@ -75,16 +107,20 @@ Atlas.views = Atlas.views || {};
         const [x, y] = Atlas.positions(p, view)[0];
         f.zoomTo([x - 45, y - 60, 90, 120]);
         q.prompt = "Which point is highlighted?";
-        q.opts = shuffle([p, ...distractors(p, 3, (x) => x.id)]).map((o) => ({ ok: o.id === p.id, label: `${Atlas.code(o.id)} · ${o.en}` }));
+        q.opts = shuffle([p, ...distractors(p, 3, (x) => x.id)]).map((o) => ({ ok: o.id === p.id, id: o.id, label: `${Atlas.code(o.id)} · ${o.en}` }));
       } else if (S.mode === "function") {
-        $("#study-figs").hidden = true;
-        const clues = [...(p.course || []).map((c) => c.t), ...p.fx].filter((t) => t.length > 18);
+        /* Clues: course notes and actions in random order, then the location as the strongest hint. */
+        const notes = shuffle([...(p.course || []).map((c) => c.t), ...p.fx].filter((t) => t.length > 18));
+        q.clues = [...notes, `Location: ${p.loc}`].map((t) => mask(t, p));
+        q.shown = Math.min(2, q.clues.length);
         q.prompt = "Which point is this?";
-        q.sub = `“${esc(mask(clues[Math.floor(Math.random() * clues.length)] || p.fx[0], p))}”`;
-        q.opts = shuffle([p, ...distractors(p, 3, (x) => x.id)]).map((o) => ({ ok: o.id === p.id, label: `${Atlas.code(o.id)} · ${o.en}` }));
+        q.sub = "Its four candidates are marked on the body. Hover an answer to see where it is.";
+        q.opts = shuffle([p, ...distractors(p, 3, (x) => x.id)]).map((o) => ({ ok: o.id === p.id, id: o.id, label: `${Atlas.code(o.id)} · ${o.en}` }));
+        const ids = q.opts.map((o) => o.id);
+        const chs = [...new Set(ids.map((id) => Atlas.POINTS[id].ch).filter(Boolean))];
+        figs.forEach((g) => { g.filterPoints((x) => ids.includes(x.id)); g.showChannels(new Set(chs)); g.setLabels(true); });
       } else {
         $("#study-figs").hidden = true;
-        if (!p.ch) return next();
         q.prompt = `Which channel is <b class="mono">${esc(Atlas.code(p.id))}</b> (${esc(p.en)}) on?`;
         const chs = shuffle(Object.keys(Atlas.CHANNELS).filter((c) => c !== p.ch)).slice(0, 3);
         q.opts = shuffle([p.ch, ...chs]).map((c) => ({ ok: c === p.ch, label: `${Atlas.CHANNELS[c].name}${Atlas.CHANNELS[c].el ? ` (${Atlas.ELEMENTS[Atlas.CHANNELS[c].el].name})` : ""}` }));
@@ -95,6 +131,7 @@ Atlas.views = Atlas.views || {};
 
     function score(ok) {
       S.total++; if (ok) { S.right++; S.streak++; } else S.streak = 0;
+      if (ok) S.round.right++; else S.round.missed.push(S.q.p.id);
       if (S.streak > S.best) { S.best = S.streak; Atlas.store.set("best", S.best); }
       S.answered = true;
     }
@@ -119,12 +156,20 @@ Atlas.views = Atlas.views || {};
       renderCard();
     }
 
+    /* Clicking a candidate point on the body answers a Function question. */
+    function answerPoint(id) {
+      if (S.mode !== "function" || S.answered || !S.q || !S.q.opts) return;
+      const i = S.q.opts.findIndex((o) => o.id === id);
+      if (i >= 0) answerOpt(i);
+    }
+
     function answerOpt(i) {
       if (S.answered) return;
       const o = S.q.opts[i];
       score(o.ok);
       S.q.picked = i;
       S.q.fb = { ok: o.ok, t: o.ok ? "Correct." : `It was ${S.q.opts.find((x) => x.ok).label}.` };
+      if (S.mode === "function") figs.forEach((f) => { f.select(S.q.p.id); f.highlight(S.q.p.ch ? [S.q.p.ch] : [], [S.q.p.id]); });
       if (S.mode === "name") figs.forEach((f) => f.ptGroups && f.ptGroups[S.q.p.id] && f.ptGroups[S.q.p.id].querySelectorAll(".pt-label").forEach((t) => t.style.display = ""));
       renderCard();
     }
@@ -135,32 +180,92 @@ Atlas.views = Atlas.views || {};
         const cls = S.answered ? (o.ok ? "right" : q.picked === i ? "wrong" : "") : "";
         return `<button data-o="${i}" class="${cls}" ${S.answered ? "disabled" : ""}>${esc(o.label)}</button>`;
       }).join("")}</div>` : "";
+      const seen = S.deckSize - S.deck.length;
       $("#quiz").innerHTML = `
-        <div class="score"><div><b>${S.right}/${S.total}</b><span class="muted">correct</span></div><div><b>${S.streak}</b><span class="muted">streak</span></div><div><b>${S.best}</b><span class="muted">best</span></div></div>
+        ${scoreHTML()}
+        ${S.deckMode ? `<div class="d-section"><span class="eyebrow">Point ${seen} of ${S.deckSize}</span>
+          <div class="progress"><span style="width:${(seen / S.deckSize) * 100}%"></span></div></div>` : ""}
         <div class="quiz-q">${q.prompt}</div>
-        ${q.sub ? `<p style="margin:0">${q.sub}</p>` : ""}
+        ${q.clues ? `<ol class="clues">${q.clues.slice(0, S.answered ? q.clues.length : q.shown).map((c) => `<li>${esc(c)}</li>`).join("")}</ol>
+          ${!S.answered && q.shown < q.clues.length ? `<div><button class="btn ghost" id="q-clue" type="button">Show another clue</button></div>` : ""}` : ""}
+        ${q.sub ? `<p style="margin:0"${q.clues ? ' class="muted"' : ""}>${q.sub}</p>` : ""}
         ${opts}
         ${S.answered ? `<div class="feedback ${q.fb.ok ? "ok" : "no"}">${esc(q.fb.t)}</div>
           <div class="d-section"><h4>${esc(Atlas.code(p.id))} ${esc(p.py)} · ${esc(p.en)}</h4><p style="margin:0">${esc(p.loc)}</p>
           ${p.course && p.course[0] ? `<div class="course-note">${esc(p.course[0].t)}<div class="src">${esc(p.course[0].ref)}</div></div>` : ""}
           <div><button class="pt" data-pt="${p.id}">Open ${esc(Atlas.code(p.id))} in the Atlas</button></div></div>` : ""}
         <div class="kata-nav"><button class="btn" id="q-next">${S.answered ? "Next question" : "Skip"}</button></div>`;
-      $("#quiz").querySelectorAll("[data-o]").forEach((b) => b.addEventListener("click", () => answerOpt(Number(b.dataset.o))));
+      $("#quiz").querySelectorAll("[data-o]").forEach((b) => {
+        b.addEventListener("click", () => answerOpt(Number(b.dataset.o)));
+        const o = q.opts[Number(b.dataset.o)];
+        if (S.mode !== "function" || S.answered || !o.id) return;
+        b.addEventListener("mouseenter", () => figs.forEach((f) => f.highlight([], [o.id])));
+        b.addEventListener("mouseleave", () => figs.forEach((f) => f.highlight([], [])));
+        b.addEventListener("focus", () => figs.forEach((f) => f.highlight([], [o.id])));
+      });
+      const clue = $("#q-clue");
+      if (clue) clue.addEventListener("click", () => { q.shown++; renderCard(); });
       $("#q-next").addEventListener("click", next);
+    }
+
+    function scoreHTML() {
+      return `<div class="score"><div><b>${S.right}/${S.total}</b><span class="muted">correct</span></div><div><b>${S.streak}</b><span class="muted">streak</span></div><div><b>${S.best}</b><span class="muted">best</span></div></div>`;
+    }
+
+    /* End of a deck round: score, the points missed, and what to do next. */
+    function renderSummary() {
+      S.done = true;
+      S.q = null;
+      figs.forEach((f) => { f.clearOverlay(); f.select(null); f.highlight([], []); f.filterPoints(() => true); f.showChannels(null); f.svg.classList.remove("hide-off"); });
+      const missed = [...new Set(S.round.missed)];
+      const pct = S.deckSize ? Math.round((S.round.right / S.deckSize) * 100) : 0;
+      $("#quiz").innerHTML = `
+        ${scoreHTML()}
+        <div class="eyebrow">Round complete</div>
+        <div class="quiz-q">${S.round.right} of ${S.deckSize} right (${pct}%)</div>
+        ${missed.length
+          ? `<div class="d-section"><h4>Missed (${missed.length})</h4><div class="chips">${missed.map((id) => `<button class="chip" data-pt="${id}">${esc(Atlas.code(id))} ${esc(Atlas.POINTS[id].en)}</button>`).join("")}</div></div>`
+          : `<div class="feedback ok">A clean round. Every point right.</div>`}
+        <div class="kata-nav">
+          ${missed.length ? `<button class="btn" id="q-missed">Practice the ${missed.length} missed</button>` : ""}
+          <button class="btn ${missed.length ? "ghost" : ""}" id="q-round">Start a new round</button>
+        </div>`;
+      const m = $("#q-missed");
+      if (m) m.addEventListener("click", () => { newRound(missed); next(); });
+      $("#q-round").addEventListener("click", () => { newRound(); next(); });
+    }
+
+    /* Clear the session counts and the saved best streak, and restart any deck. */
+    function reset() {
+      Object.assign(S, { right: 0, total: 0, streak: 0, best: 0 });
+      Atlas.store.set("best", 0);
+      if (S.deckMode) newRound();
+      S.q = null;
+      next();
     }
 
     $("#mode").addEventListener("click", (e) => {
       const b = e.target.closest("button"); if (!b) return;
       S.mode = b.dataset.m;
       $("#mode").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+      if (S.deckMode) newRound();
       next();
     });
-    $("#study-course").addEventListener("change", (e) => { S.course = e.target.checked; next(); });
+    $("#study-course").addEventListener("change", (e) => { S.course = e.target.checked; if (S.deckMode) newRound(); next(); });
+    $("#study-deck").checked = S.deckMode;
+    $("#study-deck").addEventListener("change", (e) => {
+      S.deckMode = e.target.checked;
+      Atlas.store.set("deck", S.deckMode);
+      if (S.deckMode) newRound();
+      next();
+    });
+    $("#study-reset").addEventListener("click", reset);
     document.addEventListener("keydown", (e) => {
       if (!$("#view-study").classList.contains("active") || e.target.matches("input")) return;
-      if (e.key === "Enter" && S.answered) next();
+      if (e.key === "Enter" && S.answered && !S.done) next();
       if (S.q && S.q.opts && !S.answered && /^[1-4]$/.test(e.key)) answerOpt(Number(e.key) - 1);
     });
+    if (S.deckMode) newRound();
     next();
   };
 })();
