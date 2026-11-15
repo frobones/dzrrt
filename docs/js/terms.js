@@ -73,7 +73,7 @@ Atlas.views = Atlas.views || {};
         <h2>Glossary</h2>
         <p class="muted lens-lede">Landmarks, bony features and the place words that point locations depend on. Open a count to see the points that use the term.</p>
         <div class="gloss-tools">
-          <input class="search" id="gloss-q" type="search" placeholder="Search terms, like crease or ankle" aria-label="Search the glossary">
+          <input class="search" id="gloss-q" type="search" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Search terms, like crease or ankle" aria-label="Search the glossary">
           <div class="chips" id="gloss-cats">
             <button class="chip" data-cat="" aria-pressed="true">All</button>
             ${Object.entries(T.cats).map(([k, v]) => `<button class="chip" data-cat="${k}" aria-pressed="false">${esc(v)}</button>`).join("")}

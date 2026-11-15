@@ -62,6 +62,9 @@ window.Atlas = window.Atlas || {};
     if (!VIEWS.includes(view)) view = "atlas";
     VIEWS.forEach((v) => { $("#view-" + v).classList.toggle("active", v === view); });
     document.querySelectorAll("nav.tabs a").forEach((a) => a.setAttribute("aria-current", a.getAttribute("href") === "#" + view ? "page" : "false"));
+    /* On a phone the tabs are one sideways-scrolling row; bring the current one into view. */
+    const nav = $("nav.tabs"), cur = $('nav.tabs a[aria-current="page"]');
+    if (cur && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = cur.offsetLeft - nav.offsetLeft - (nav.clientWidth - cur.offsetWidth) / 2;
     if (!inited[view]) { inited[view] = true; (view === "atlas" ? initAtlas : Atlas.views[view])(); }
     if (view === "atlas" && arg && arg.ch) showChannel(arg.ch);
     else if (view === "atlas" && arg && Atlas.POINTS[arg]) {
@@ -95,11 +98,17 @@ window.Atlas = window.Atlas || {};
     }
     return view;
   }
+  /* On a phone the header and controls fill the first screen, so opening one thing scrolls to its figure. */
+  const FIGURE_OF = { atlas: "#view-atlas .stage", kata: "#view-kata .kata-figure", anatomy: "#anat-body .anat-figcol" };
   Atlas.go = function (view, arg) {
     const hash = hashFor(view, arg);
     if (location.hash !== "#" + hash) history.replaceState(null, "", "#" + hash);
     show(view, arg);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    const narrow = window.matchMedia("(max-width: 800px)").matches;
+    const fig = narrow && arg !== undefined && arg !== null && FIGURE_OF[view] && $(FIGURE_OF[view]);
+    /* Instant: a smooth scroll gets cut short while the tab builds its figure. */
+    if (fig) fig.scrollIntoView({ block: "start" });
+    else window.scrollTo({ top: 0, behavior: "smooth" });
   };
   function fromHash() {
     const h = location.hash.slice(1);
@@ -136,7 +145,7 @@ window.Atlas = window.Atlas || {};
       <div class="atlas">
         <aside class="rail">
           <div class="panel"><label class="eyebrow" for="q">Search</label>
-            <input id="q" class="search" type="search" placeholder="LI4, Hegu, headache, anger…" autocomplete="off"></div>
+            <input id="q" class="search" type="search" placeholder="LI4, Hegu, headache, anger…" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
           <div class="panel">
             <h3>Layer</h3>
             <div class="seg" id="layer">
@@ -184,9 +193,10 @@ window.Atlas = window.Atlas || {};
       $("#atlas-dim").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.dim === dim)));
       $("#atlas-figs").hidden = dim === "3d";
       $("#atlas-3d").hidden = dim !== "3d";
-      $("#atlas-help").textContent = (dim === "3d"
-        ? "Drag to turn the body, scroll or pinch to zoom, right-drag to move. Points sit on the muscle surface. "
-        : "Scroll or pinch to zoom, drag to pan. ") + "Positions are approximate study guides; always locate points by palpation.";
+      const moves = Atlas.coarse
+        ? (dim === "3d" ? "Use two fingers to turn the body and pinch to zoom; one finger scrolls the page. " : "Use two fingers to pan and pinch to zoom; one finger scrolls the page. ")
+        : dim === "3d" ? "Drag to turn the body, scroll or pinch to zoom, right-drag to move. " : "Scroll or pinch to zoom, drag to pan. ";
+      $("#atlas-help").textContent = moves + (dim === "3d" ? "Points sit on the muscle surface. " : "") + "Positions are approximate study guides; always locate points by palpation.";
       if (dim === "3d" && !A.fig3d) {
         A.fig3d = new Atlas.Figure3D($("#atlas-3d"), { onPoint });
         A.fig3d.setFlow($("#flow").checked);
@@ -230,6 +240,7 @@ window.Atlas = window.Atlas || {};
       A.figs.forEach((f) => f.zoomTo(Atlas.REGIONS[b.dataset.region]));
     });
     setDim(A.dim);
+    bindSheet();
     if (!A.sel) renderDetail(null);
   }
 
@@ -271,6 +282,28 @@ window.Atlas = window.Atlas || {};
     if (zoom && A.dim === "2d") A.figs2d.forEach((f) => f.zoomToPoint(id));
     if (push) history.replaceState(null, "", "#p-" + id);
     renderDetail(id);
+    /* On a phone the details would sit two screens below the figures, so they slide up over them. */
+    if ((push || zoom) && window.matchMedia("(max-width: 800px)").matches) $("#detail").classList.add("sheet-open");
+  }
+
+  /* The phone sheet closes with its X, Escape, or a downward swipe on its bar; the point stays selected. */
+  function bindSheet() {
+    const box = $("#detail");
+    const close = () => { box.classList.remove("sheet-open"); box.style.transform = ""; };
+    box.addEventListener("click", (e) => { if (e.target.closest(".sheet-close")) close(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && box.classList.contains("sheet-open")) close(); });
+    let y0 = null;
+    box.addEventListener("touchstart", (e) => { if (e.target.closest(".sheet-bar")) y0 = e.touches[0].clientY; }, { passive: true });
+    box.addEventListener("touchmove", (e) => {
+      if (y0 === null) return;
+      box.style.transform = `translateY(${Math.max(0, e.touches[0].clientY - y0)}px)`;
+    }, { passive: true });
+    box.addEventListener("touchend", (e) => {
+      if (y0 === null) return;
+      const dy = e.changedTouches[0].clientY - y0;
+      y0 = null;
+      if (dy > 70) close(); else box.style.transform = "";
+    });
   }
 
   /** Show one channel alone, highlighted, on the whole body. */
@@ -309,6 +342,8 @@ window.Atlas = window.Atlas || {};
     const steps = kataSteps(id);
     const muscles = Atlas.musclesUnder ? Atlas.musclesUnder(id).sort((a, b) => !!b.exam - !!a.exam) : [];
     box.innerHTML = `
+      <div class="sheet-bar"><span class="sheet-grip" aria-hidden="true"></span>
+        <button class="sheet-close" type="button" aria-label="Close the point details">×</button></div>
       <div class="d-head">
         <div class="d-hz" style="color:${Atlas.pointColor(p)}">${esc(p.hz)}</div>
         <div class="d-code">${esc(code(id))}</div>

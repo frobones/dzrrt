@@ -97,6 +97,27 @@ window.Atlas = window.Atlas || {};
   }
   Atlas.positions = positions;
 
+  /* Touch screens: one finger scrolls the page, two fingers move the figures (body.js, viewer3d.js). */
+  Atlas.coarse = window.matchMedia("(pointer: coarse)").matches;
+  /**
+   * Keep a two-finger gesture on el for the figure, and leave one finger to scroll the page; show
+   * a hint until the first two-finger move. Returns nothing; el's touch-action allows page panning.
+   */
+  Atlas.twoFingerGestures = (el, host, hint) => {
+    el.style.touchAction = "pan-x pan-y";
+    const tip = document.createElement("div");
+    tip.className = "touch-hint";
+    tip.textContent = hint;
+    host.appendChild(tip);
+    const hold = (e) => {
+      if (e.touches.length < 2) return;
+      e.preventDefault(); // a two-finger gesture moves the figure, not the page
+      tip.hidden = true;
+    };
+    el.addEventListener("touchstart", hold, { passive: false });
+    el.addEventListener("touchmove", hold, { passive: false });
+  };
+
   class Figure {
     constructor(host, view, opts = {}) {
       this.view = view;
@@ -123,6 +144,7 @@ window.Atlas = window.Atlas || {};
       this.drawChannels();
       if (opts.points !== false) this.drawPoints();
       this.bindPan();
+      if (Atlas.coarse && opts.zoom !== false) Atlas.twoFingerGestures(this.svg, host, "Two fingers to move and zoom");
     }
 
     drawChannels() {
@@ -308,10 +330,17 @@ window.Atlas = window.Atlas || {};
           const [a, b] = [...ptrs.values()];
           const other = [...ptrs.entries()].find(([k]) => k !== e.pointerId)[1];
           const d0 = Math.hypot(prev[0] - other[0], prev[1] - other[1]), d1 = Math.hypot(a[0] - b[0], a[1] - b[1]);
-          if (d0 > 0) { const [fx, fy] = this.toFig((a[0] + b[0]) / 2, (a[1] + b[1]) / 2); this.zoomBy(d0 / d1, fx, fy); }
+          /* Two fingers pan with their midpoint and pinch to zoom around it. */
+          const r = this.svg.getBoundingClientRect(), s = this.box[2] / r.width;
+          const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+          const dx = (mx - (prev[0] + other[0]) / 2) * s, dy = (my - (prev[1] + other[1]) / 2) * s;
+          this.box = [this.box[0] - dx, this.box[1] - dy, this.box[2], this.box[3]];
+          if (d0 > 0) { const [fx, fy] = this.toFig(mx, my); this.zoomBy(d0 / d1, fx, fy); } else this.applyBox();
           start.moved = true;
           return;
         }
+        /* On a touch screen one finger scrolls the page, so a single touch never pans. */
+        if (e.pointerType === "touch" && Atlas.coarse) return;
         const r = this.svg.getBoundingClientRect();
         const s = this.box[2] / r.width;
         const dx = (e.clientX - start.x) * s, dy = (e.clientY - start.y) * s;

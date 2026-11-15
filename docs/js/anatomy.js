@@ -233,7 +233,7 @@ Atlas.views = Atlas.views || {};
     $("#anat-body").innerHTML = `
       <div class="anat-grid">
         <div class="rail panel">
-          <input class="search" id="mus-q" type="search" placeholder="Search muscles" aria-label="Search muscles">
+          <input class="search" id="mus-q" type="search" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Search muscles" aria-label="Search muscles">
           <p class="muted anat-count">${list.length} muscles${Atlas.examOnly() ? " on the exam list" : ""}</p>
           <div id="mus-items" class="anat-list"></div>
         </div>

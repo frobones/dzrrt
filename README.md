@@ -13,6 +13,10 @@ the triceps. Close spellings count too, so "gastrocnemus" still finds the muscle
 Picking a result opens it in its own tab, selected, zoomed and highlighted, in that
 tab's 2D or 3D figure.
 
+**On a phone**, the tabs sit in one row you swipe sideways. One finger scrolls the page
+and two fingers move, zoom and turn the figures, and a point's details slide up from
+the bottom of the screen.
+
 An **Exam | Everything** switch on the Atlas, Study and Anatomy pages narrows each one
 to what the written exams cover: the points the course names, and the muscles and
 bones in the anatomy study guide (Handbook 4.54). It starts on Exam, and one
