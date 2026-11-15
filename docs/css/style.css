@@ -440,6 +440,96 @@ rect.d-mv { stroke: none; fill: var(--accent); opacity: 0.85; }
   .dir-pair { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* ---------- Anatomy ---------- */
+.anat-bar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; margin-bottom: 14px; }
+.anat-bar .seg[hidden] { display: none; }
+.anat-grid { display: grid; grid-template-columns: 240px minmax(0, 1fr) 380px; gap: 16px; align-items: start; }
+.anat-grid .rail { gap: 8px; align-content: start; }
+.anat-count { margin: 0; font-size: 12.5px; }
+.anat-list { display: grid; gap: 2px; }
+.anat-list h4 { margin: 10px 0 2px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.anat-list button { text-align: left; border: 0; background: transparent; padding: 6px 10px; border-radius: 6px; font-size: 14px; }
+.anat-list button:hover { background: var(--surface-2); }
+.anat-list button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+#mus-figs .figure svg, #bone-figs .figure svg { max-height: calc(100vh - 200px); }
+.fig-dim { opacity: 0.45; }
+.anat-card { display: grid; gap: 10px; align-content: start; position: sticky; top: 76px; max-height: calc(100vh - 92px); overflow: auto; }
+.card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.exam-tag { font-size: 11px; font-weight: 600; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 1px 8px; }
+.oia p { margin: 2px 0 0; }
+.note-box { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; font-size: 14px; }
+.pull-why { font-size: 13px; margin: 0; }
+.pull-band { fill: none; stroke: var(--fire); stroke-width: 9; stroke-linecap: round; opacity: 0.45; }
+.pull-fan { fill: none; stroke: var(--fire); stroke-width: 2; opacity: 0.6; stroke-dasharray: 3 3; }
+.pull-o circle, .pull-i circle { stroke: var(--fire); stroke-width: 1.6; }
+.pull-o circle { fill: var(--fire); }
+.pull-i circle { fill: var(--paper); }
+.pull-o text, .pull-i text { font: 700 6.5px var(--f-body); pointer-events: none; }
+.pull-o text { fill: var(--paper); }
+.pull-i text { fill: var(--fire); }
+.lm circle { fill: var(--accent); stroke: var(--paper); stroke-width: 1.4; }
+.lm.palp circle { fill: var(--fire); }
+.lm text { font: 500 8px var(--f-body); fill: var(--ink); paint-order: stroke; stroke: var(--paper); stroke-width: 3px; }
+.joint { border-top: 1px solid var(--line); padding-top: 10px; display: grid; gap: 4px; font-size: 14px; }
+.joint h4 { margin: 0; font-size: 15px; }
+.plate-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; align-items: start; }
+.plate-cols h3 { font-size: 18px; }
+.plate-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
+.plate-list details { display: grid; gap: 6px; }
+.plate-list details > :not(summary) { margin: 6px 0 0 28px; }
+.plate-list summary { list-style: none; cursor: pointer; }
+.plate-list summary::-webkit-details-marker { display: none; }
+.plate-row { display: flex; gap: 8px; align-items: baseline; }
+.plate-row input { width: 18px; height: 18px; flex: none; align-self: center; }
+.plate-id { font-family: var(--f-mono); font-size: 13px; color: var(--muted); min-width: 34px; }
+.anat-quiz { display: grid; gap: 12px; max-width: 760px; }
+#aq { display: grid; gap: 10px; }
+.aq-prompt { font-size: 18px; margin: 0; }
+.aq-opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+.aq-opts .btn { text-align: left; white-space: normal; }
+.aq-opts .btn.ok { border-color: var(--good); background: color-mix(in srgb, var(--good) 14%, var(--surface)); }
+.aq-opts .btn.no { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--surface)); }
+.aq-result { margin: 0; font-weight: 600; }
+.aq-result.good { color: var(--good); } .aq-result.bad { color: var(--bad); }
+.anat-figcol { display: grid; gap: 10px; min-width: 0; }
+.v3d-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.v3d-tools { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 13.5px; }
+.v3d-tools[hidden] { display: none; }
+.v3d-tools label { display: inline-flex; gap: 5px; align-items: center; }
+#mus-3d { height: calc(100vh - 230px); min-height: 420px; }
+#mus-3d[hidden] { display: none; }
+.v3d { position: relative; border: 1px solid var(--line); border-radius: var(--r); background: radial-gradient(ellipse at 50% 40%, var(--surface) 0%, var(--surface-2) 100%); overflow: hidden; }
+.v3d canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+.v3d-status { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 20px; text-align: center; color: var(--muted); }
+.v3d-status[hidden] { display: none; }
+.v3d-error { color: var(--bad); }
+.v3d-hover { position: absolute; left: 10px; bottom: 10px; background: var(--ink); color: var(--paper); border-radius: 6px; padding: 3px 9px; font-size: 13px; pointer-events: none; }
+.v3d-hover[hidden], .v3d-hover:empty { display: none; }
+.v3d-key { font-weight: 600; }
+.body3d { height: calc(100vh - 200px); min-height: 440px; }
+.body3d[hidden], #atlas-figs[hidden], #kata-fig[hidden] { display: none; }
+.kata-figure { display: grid; gap: 10px; }
+.kata-dim { justify-self: start; }
+.v3d-credit { margin: 0; font-size: 12px; color: var(--muted); }
+.v3d-credit[hidden] { display: none; }
+.v3d-credit a { color: inherit; }
+.v3d-key.o { color: #d94b2b; }
+.v3d-key.i { color: #2f6fd6; }
+@media (max-width: 1180px) {
+  .anat-grid { grid-template-columns: 220px minmax(0, 1fr); }
+  .anat-card { grid-column: 1 / -1; position: static; max-height: none; }
+}
+@media (max-width: 800px) {
+  .anat-grid { grid-template-columns: minmax(0, 1fr); }
+  .anat-grid .rail { position: static; max-height: 260px; order: 3; }
+  .anat-grid .figures { order: 1; }
+  .anat-grid .fig-dim { display: none; }
+  .anat-card { order: 2; }
+  #mus-figs .figure svg, #bone-figs .figure svg { max-height: 60vh; }
+  #mus-3d { height: 62vh; min-height: 360px; }
+  .body3d { height: 62vh; min-height: 360px; }
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 1180px) {
   .atlas { grid-template-columns: 220px minmax(0, 1fr); }
