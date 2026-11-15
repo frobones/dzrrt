@@ -46,12 +46,18 @@ window.Atlas = window.Atlas || {};
   const BACK_REGIONS = new Set(["back", "upperBack"]);
 
   class Figure3D {
-    /** @param {HTMLElement} host  @param {{onPoint?: (id: string) => void}} opts */
+    /**
+     * @param {HTMLElement} host
+     * @param {{onPoint?: (id: string) => void, hlLabels?: boolean}} opts  hlLabels: name only highlighted points
+     */
     constructor(host, opts = {}) {
       this.host = host;
-      this.state = { layer: "primary", chans: null, pred: null, hlChs: [], hlPts: [], sel: null, focus: null };
+      this.state = {
+        layer: "primary", chans: null, pred: null, hlChs: [], hlPts: [], sel: null, focus: null,
+        flow: true, labels: false, kataLines: false,
+      };
       this.v = null;
-      this.ready = Atlas.load3D(host, { onPoint: opts.onPoint }).then((v) => {
+      this.ready = Atlas.load3D(host, { onPoint: opts.onPoint, hlLabels: opts.hlLabels }).then((v) => {
         if (!v) return false;
         return v.loaded.then((ok) => {
           if (!ok) return false;
@@ -67,6 +73,9 @@ window.Atlas = window.Atlas || {};
       const v = this.v, s = this.state;
       if (!v) return;
       v.setBody({ channels: s.chans, pointFilter: s.pred, layer: s.layer, highlightChs: s.hlChs, highlightPts: s.hlPts, selected: s.sel });
+      if (v.flowOn !== s.flow) v.setFlow(s.flow);
+      v.setPointLabels(s.labels);
+      v.setKataLines(s.kataLines);
       const f = s.focus;
       s.focus = null;
       if (!f) return;
@@ -106,11 +115,11 @@ window.Atlas = window.Atlas || {};
       this.flush();
     }
 
-    /* The 2D-only extras have nothing to draw in 3D. */
-    setFlow() {}
-    setLabels() {}
-    clearOverlay() {}
-    drawKataLines() {}
+    setFlow(on) { this.state.flow = on; this.flush(); }
+    setLabels(on) { this.state.labels = on; this.flush(); }
+    /* The only overlay the 3D figure draws is the kata back lines. */
+    clearOverlay() { this.state.kataLines = false; this.flush(); }
+    drawKataLines() { this.state.kataLines = true; this.flush(); }
 
     dispose() { if (this.v) this.v.dispose(); }
   }

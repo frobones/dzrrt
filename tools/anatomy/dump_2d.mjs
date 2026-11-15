@@ -4,7 +4,7 @@
  *     node tools/anatomy/dump_2d.mjs > temp/proj/input.json
  *
  * Loads the site's classic data scripts in a sandbox and prints the point
- * positions, channel paths and kata zoom regions as JSON, plus the anatomy landmarks,
+ * positions, channel paths, kata zoom regions and kata back lines as JSON, plus the anatomy landmarks,
  * bones and joints that anatomy_3d.py places on the model.
  */
 import { readFileSync } from "node:fs";
@@ -26,6 +26,6 @@ const points = Object.values(A.POINTS).map((p) => ({ id: p.id, v: p.v, dx: p.dx,
 const channels = Object.fromEntries(Object.entries(A.CHANNELS).map(([code, c]) => [code, c.paths]));
 const landmarks = Object.entries(A.LANDMARKS).map(([id, l]) => ({ id, dx: l.at[0], y: l.at[1] }));
 process.stdout.write(JSON.stringify({
-  points, channels, regions: A.REGIONS,
+  points, channels, regions: A.REGIONS, kataLines: A.KATA_LINES,
   landmarks, bones: A.BONES.map((b) => b.name), joints: A.JOINTS.map((j) => j.name),
 }));

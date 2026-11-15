@@ -30,6 +30,16 @@ Atlas.REGIONS = {
   face: [95, 20, 110, 100],
 };
 
+/*
+ * The three back lines traced in steps 1 and 3, on the back figure as [dx from midline, y]:
+ * Line 1 Hua Tuo Jia Ji, Line 2 the inner Bladder line, Line 3 the outer Bladder line (2.35).
+ */
+Atlas.KATA_LINES = [
+  { n: "1", path: [[4, 120], [4, 340]] },
+  { n: "2", path: [[10, 120], [10, 340]] },
+  { n: "3", path: [[22, 120], [22, 340]] },
+];
+
 Atlas.KATA_GROUPS = [
   { id: "open", name: "Opening: Upper Back and Arms", pos: "prone", ref: "Handbook 2.35-2.38" },
   { id: "lower", name: "Back: Lower Body and Legs", pos: "prone", ref: "Handbook 2.39-2.40" },

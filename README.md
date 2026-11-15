@@ -17,7 +17,8 @@ choice applies across the site.
   remembers your choice.
   - Filter by channel, point type, or search.
   - Switch between the primary and sinew channel layers, and watch the direction of Qi
-    flow.
+    flow: moving dashes in 2D, arrowheads travelling along the channels in 3D.
+  - Point names appear as you zoom in, or all the time with **Always show labels**.
   - Click a point for:
     - its location and how to find it
     - what the course says, with page references
@@ -26,6 +27,7 @@ choice applies across the site.
     - a web of everything it connects to
 - **Kata.** Steps through the 60-step kata. Each step turns the body to the working
   area, on the correct side, and highlights the channels and points under your hands.
+  The three back lines of steps 1 and 3 are drawn in both 2D and 3D.
 - **Body Clock.** The 24-hour channel circuit, with the channel that is active now.
 - **Five Phases.** An interactive Sheng/Ko diagram with organs, source points, emotions,
   the class handout's DZRRT treatment ideas, and the full correspondence table.

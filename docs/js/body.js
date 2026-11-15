@@ -206,13 +206,14 @@ window.Atlas = window.Atlas || {};
 
     /* Kata back lines: Line 1 Hua Tuo Jia Ji, Line 2 inner Bladder, Line 3 outer Bladder. */
     drawKataLines() {
-      [[4, "1"], [10, "2"], [22, "3"]].forEach(([dx, n]) => {
+      for (const { n, path } of Atlas.KATA_LINES) {
+        const [[dx, y0], [, y1]] = path;
         for (const s of [1, -1]) {
-          el("path", { d: `M${CX + s * dx},120 L${CX + s * dx},340`, class: "kata-line" }, this.overlay);
+          el("path", { d: `M${CX + s * dx},${y0} L${CX + s * dx},${y1}`, class: "kata-line" }, this.overlay);
         }
-        const t = el("text", { x: CX - dx - 2, y: 116, class: "kata-line-label", "text-anchor": "middle" }, this.overlay);
+        const t = el("text", { x: CX - dx - 2, y: y0 - 4, class: "kata-line-label", "text-anchor": "middle" }, this.overlay);
         t.textContent = n;
-      });
+      }
     }
 
     mark(x, y, color) {

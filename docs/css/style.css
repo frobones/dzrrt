@@ -500,6 +500,8 @@ rect.d-mv { stroke: none; fill: var(--accent); opacity: 0.85; }
 .v3d-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .v3d-labels span { position: absolute; left: 0; top: 0; margin: -10px 0 0 10px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 5px; background: color-mix(in srgb, var(--surface) 90%, transparent); color: var(--ink); font-size: 12px; white-space: nowrap; }
 .v3d-labels span[hidden] { display: none; }
+.v3d-labels span.v3d-pt { margin: -16px 0 0 6px; padding: 0 4px; font: 600 11px var(--f-mono); }
+.v3d-labels span.v3d-kata { margin: -22px 0 0 -6px; padding: 0 5px; border-color: var(--accent); color: var(--accent); font: 700 12px var(--f-mono); }
 .v3d { position: relative; border: 1px solid var(--line); border-radius: var(--r); background: radial-gradient(ellipse at 50% 40%, var(--surface) 0%, var(--surface-2) 100%); overflow: hidden; }
 .v3d canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
 .v3d-status { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 20px; text-align: center; color: var(--muted); }
