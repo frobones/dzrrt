@@ -391,6 +391,10 @@ The Atlas, Study and Anatomy pages carry an Exam | Everything switch
 (`Atlas.scopeSwitch()`); the choice is site-wide (`Atlas.examOnly()`, event
 `scopechange`) and defaults to Exam. A page that adds exam-scoped content should use it.
 
+On touch screens (`Atlas.coarse`), one finger scrolls the page and two fingers move the
+figures: `Atlas.twoFingerGestures` sets this up for the 2D figures and the 3D viewer, and
+any new figure should use it.
+
 The Atlas, Kata and Anatomy views offer a 3D/2D toggle, and each tab remembers its own
 choice (`Atlas.dim(tab)`). Atlas and Kata start in 2D, Anatomy in 3D. Other figures
 (Body Clock, Five Phases, Study, Two Lenses, Body Terms) stay 2D.

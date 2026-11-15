@@ -88,6 +88,11 @@ export class Viewer3D {
     this.scene.add(this.camera);
     this.controls = new OrbitControls(this.camera, canvas);
     this.controls.addEventListener("change", () => this.render());
+    /* On touch screens one finger scrolls the page; two fingers turn and pinch-zoom the body. */
+    if (Atlas.coarse) {
+      this.controls.touches = { ONE: null, TWO: THREE.TOUCH.DOLLY_ROTATE };
+      Atlas.twoFingerGestures(canvas, host, "Two fingers to turn and zoom");
+    }
     this.mats = {
       bones: material(COLORS.bones), muscles: material(COLORS.muscles), joints: material(COLORS.joints),
       faded: material(COLORS.muscles, { transparent: true, opacity: 0.12, depthWrite: false }),
