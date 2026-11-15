@@ -194,7 +194,7 @@ window.Atlas = window.Atlas || {};
       $("#atlas-figs").hidden = dim === "3d";
       $("#atlas-3d").hidden = dim !== "3d";
       const moves = Atlas.coarse
-        ? (dim === "3d" ? "Use two fingers to turn the body and pinch to zoom; one finger scrolls the page. " : "Use two fingers to pan and pinch to zoom; one finger scrolls the page. ")
+        ? (dim === "3d" ? "Use two fingers to turn the body and pinch to zoom, and double-tap a spot to center on it; one finger scrolls the page. " : "Use two fingers to pan and pinch to zoom; one finger scrolls the page. ")
         : dim === "3d" ? "Drag to turn the body, scroll or pinch to zoom, right-drag to move. " : "Scroll or pinch to zoom, drag to pan. ";
       $("#atlas-help").textContent = moves + (dim === "3d" ? "Points sit on the muscle surface. " : "") + "Positions are approximate study guides; always locate points by palpation.";
       if (dim === "3d" && !A.fig3d) {

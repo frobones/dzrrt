@@ -14,8 +14,8 @@ Picking a result opens it in its own tab, selected, zoomed and highlighted, in t
 tab's 2D or 3D figure.
 
 **On a phone**, the tabs sit in one row you swipe sideways. One finger scrolls the page
-and two fingers move, zoom and turn the figures, and a point's details slide up from
-the bottom of the screen.
+and two fingers move, zoom and turn the figures; on the 3D body, double-tap a spot to
+center on it. A point's details slide up from the bottom of the screen.
 
 An **Exam | Everything** switch on the Atlas, Study and Anatomy pages narrows each one
 to what the written exams cover: the points the course names, and the muscles and
