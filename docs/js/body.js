@@ -204,6 +204,14 @@ window.Atlas = window.Atlas || {};
 
     clearOverlay() { this.overlay.innerHTML = ""; }
 
+    /** Frame a point drawn on this figure; a point not drawn here leaves the view alone. */
+    zoomToPoint(id, size = 110) {
+      const dot = this.ptGroups && this.ptGroups[id] && this.ptGroups[id].querySelector(".pt-dot");
+      if (!dot) return;
+      const x = Number(dot.getAttribute("cx")), y = Number(dot.getAttribute("cy"));
+      this.zoomTo([x - size / 2, y - size / 2, size, size]);
+    }
+
     /* Kata back lines: Line 1 Hua Tuo Jia Ji, Line 2 inner Bladder, Line 3 outer Bladder. */
     drawKataLines() {
       for (const { n, path } of Atlas.KATA_LINES) {

@@ -172,12 +172,22 @@ Atlas.views = Atlas.views || {};
     panel("muscles");
   };
 
-  Atlas.anatomyGo = (id) => {
-    if (!byId[id]) return;
-    S.muscle = id;
-    /* A muscle off the exam list only shows under Everything. */
-    if (!byId[id].exam) Atlas.setExam(false);
-    panel("muscles");
+  /**
+   * Open the Anatomy tab on one thing: a muscle id, or {bone}, {lm} (a landmark id) or {joint},
+   * which open in Bones and joints. Anything the exam leaves out switches the site to Everything.
+   */
+  Atlas.anatomyGo = (arg) => {
+    if (typeof arg === "string") {
+      if (!byId[arg]) return;
+      S.muscle = arg;
+      if (!byId[arg].exam) Atlas.setExam(false);
+      panel("muscles");
+      return;
+    }
+    const bone = arg.bone || (arg.lm ? Atlas.LANDMARKS[arg.lm].b : jointHome(arg.joint));
+    if (!Atlas.boneOnExam(bone)) Atlas.setExam(false);
+    S.pending = { ...arg, bone };
+    panel("bones");
   };
 
   function panel(p) {
@@ -305,6 +315,29 @@ Atlas.views = Atlas.views || {};
 
   /* ---------- Bones and joints ---------- */
   /* The study guide leaves out the individual bones of the hands and feet (Handbook 4.54). */
+  Atlas.boneOnExam = (name) => !NOT_ON_EXAM.has(name);
+  /* Joints whose bones are described generally ("adjacent carpals", "rib"), listed on the cards they belong to. */
+  const CARPAL_JOINTS = ["Intercarpal joints", "Midcarpal joint"];
+  const SPINE_JOINTS = ["Intervertebral joints (vertebral bodies)"];
+  const MORE_JOINTS = {
+    "Cervical vertebrae (C3–C7)": SPINE_JOINTS, "Thoracic vertebrae (T1–T12)": SPINE_JOINTS, "Lumbar vertebrae (L1–L5)": SPINE_JOINTS,
+    "Sternum": ["First sternocostal joint"], "Ribs (12 pairs)": ["First sternocostal joint", "Costochondral joints", "Interchondral joints"],
+    ...Object.fromEntries(["Scaphoid", "Lunate", "Triquetrum", "Pisiform", "Trapezium", "Trapezoid", "Capitate", "Hamate"].map((b) => [b, CARPAL_JOINTS])),
+    "Metacarpals (1–5)": ["Metacarpophalangeal (MCP) joints"], "Phalanges of the hand": ["Metacarpophalangeal (MCP) joints"],
+    "Metatarsals (1–5)": ["Tarsometatarsal joints", "Intermetatarsal joints"],
+    "Cuneiforms (medial, intermediate, lateral)": ["Tarsometatarsal joints"], "Cuboid": ["Tarsometatarsal joints"],
+  };
+  /* The joints a bone card lists: those naming the bone's first word among their bones, plus MORE_JOINTS. */
+  const jointsOf = (name) => {
+    const key = name.split(/[ (]/)[0].toLowerCase();
+    const more = MORE_JOINTS[name] || [];
+    return Atlas.JOINTS.filter((j) => more.includes(j.name) || (j.bones || []).some((x) => x.toLowerCase().includes(key)));
+  };
+  /* The bone card a joint opens on: the first on the exam that lists it, else the first that does. */
+  const jointHome = (joint) => {
+    const homes = Atlas.BONES.filter((b) => jointsOf(b.name).some((j) => j.name === joint));
+    return (homes.find((b) => Atlas.boneOnExam(b.name)) || homes[0]).name;
+  };
   const NOT_ON_EXAM = new Set(["Scaphoid", "Lunate", "Triquetrum", "Pisiform", "Trapezium", "Trapezoid", "Capitate", "Hamate",
     "Sesamoid bones of the hand", "Talus", "Calcaneus", "Navicular", "Cuboid", "Cuneiforms (medial, intermediate, lateral)",
     "Sesamoid bones of the foot"]);
@@ -426,8 +459,7 @@ Atlas.views = Atlas.views || {};
       draw();
       const b = Atlas.BONES.find((x) => x.name === name);
       const ids = boneIds(name);
-      const key = name.split(/[ (]/)[0].toLowerCase();
-      const joints = Atlas.JOINTS.filter((j) => (j.bones || []).some((x) => x.toLowerCase().includes(key)));
+      const joints = jointsOf(name);
       const attach = Atlas.MUSCLES.filter((m) => m.v && [...m.ol, ...m.il].some((id) => Atlas.LANDMARKS[id].b === name) && inPool(m));
       const shared = Atlas.BONE3D[name].includes("Hip bone.l") && name !== "Coxal (hip) bone";
       $("#bone-card").innerHTML = `
@@ -452,22 +484,36 @@ Atlas.views = Atlas.views || {};
     }
     $("#palp-btn").addEventListener("click", showPalp);
     $("#bone-items").addEventListener("click", (e) => { const b = e.target.closest("[data-bone]"); if (b) showBone(b.dataset.bone); });
-    $("#bone-card").addEventListener("click", (e) => {
-      const jb = e.target.closest("[data-joint]");
-      if (jb) {
-        sel = { kind: "joint", name: jb.dataset.joint, side: sel.side };
-        if (S.dim === "2d") $("#bone-dim [data-dim='3d']").click(); else draw();
-        return;
-      }
-      const b = e.target.closest("[data-lm]"); if (!b) return;
-      const id = b.dataset.lm;
-      $("#bone-card").querySelectorAll("[data-lm]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    /* Joints show on the 3D body only, so picking one in 2D switches the tab to 3D. */
+    function showJoint(name) {
+      sel = { kind: "joint", name, side: sel.side };
+      const card = $("#bone-card").querySelector(`[data-joint="${CSS.escape(name)}"]`);
+      if (card) card.closest(".joint").scrollIntoView({ block: "nearest" });
+      if (S.dim === "2d") $("#bone-dim [data-dim='3d']").click(); else draw();
+    }
+    function selectLandmark(id) {
+      $("#bone-card").querySelectorAll("[data-lm]").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.lm === id)));
       const ms = Atlas.MUSCLES.filter((m) => m.v && [...m.ol, ...m.il].includes(id));
       $("#lm-out").innerHTML = `<div class="d-section"><h4>Attaches here</h4>${ms.length ? `<div class="chips">${ms.map(muscleChip).join("")}</div>` : `<p class="muted" style="margin:0">No muscle in this atlas is placed on it.</p>`}</div>`;
       sel = { kind: "lm", id, side: sel.side };
       draw();
+    }
+    $("#bone-card").addEventListener("click", (e) => {
+      const jb = e.target.closest("[data-joint]");
+      if (jb) { showJoint(jb.dataset.joint); return; }
+      const b = e.target.closest("[data-lm]");
+      if (b) selectLandmark(b.dataset.lm);
     });
-    showPalp();
+    /* A deep link (Atlas.anatomyGo) names what to open; otherwise start on the palpable landmarks. */
+    const go = S.pending;
+    S.pending = null;
+    if (go) {
+      showBone(go.bone);
+      if (go.lm) selectLandmark(go.lm);
+      else if (go.joint) showJoint(go.joint);
+    } else showPalp();
+    const picked = $("#bone-items [aria-pressed='true']");
+    if (picked) picked.scrollIntoView({ block: "nearest" });
   }
 
   function jointCard(j) {

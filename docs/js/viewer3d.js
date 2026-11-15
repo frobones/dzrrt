@@ -483,7 +483,8 @@ export class Viewer3D {
   /** Move the arrowheads along their channels; t is seconds since flow started. */
   placeFlow(t) {
     const dummy = new THREE.Object3D(), up = new THREE.Vector3(0, 1, 0), tan = new THREE.Vector3();
-    const shift = (t * FLOW_SPEED) % FLOW_GAP;
+    /* A frame's timestamp can fall just before flowStart; a negative shift would put arrows off the line. */
+    const shift = (Math.max(0, t) * FLOW_SPEED) % FLOW_GAP;
     for (const f of this.flows) {
       if (!f.visible) continue;
       const { curve, length, n, reverse } = f.userData;
