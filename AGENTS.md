@@ -383,9 +383,9 @@ The Atlas, Study and Anatomy pages carry an Exam | Everything switch
 (`Atlas.scopeSwitch()`); the choice is site-wide (`Atlas.examOnly()`, event
 `scopechange`) and defaults to Exam. A page that adds exam-scoped content should use it.
 
-The Atlas, Kata and Anatomy views default to 3D and offer a 2D toggle; the choice is
-shared across views (`Atlas.dim()`). Other figures (Body Clock, Five Phases, Study,
-Two Lenses, Body Terms) stay 2D.
+The Atlas, Kata and Anatomy views offer a 3D/2D toggle, and each tab remembers its own
+choice (`Atlas.dim(tab)`). Atlas and Kata start in 2D, Anatomy in 3D. Other figures
+(Body Clock, Five Phases, Study, Two Lenses, Body Terms) stay 2D.
 
 **When point or channel positions change in 2D, regenerate the 3D positions:**
 

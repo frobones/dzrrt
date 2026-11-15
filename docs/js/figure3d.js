@@ -6,19 +6,24 @@
  * same methods as the 2D Atlas.Figure (showChannels, filterPoints, highlight, select,
  * zoomTo...), so a view can swap one for the other. Calls made while the model is
  * still loading are remembered and applied once it is ready.
- * Atlas.dim() is the shared 2D/3D preference; Atlas.setDim() fires "dimchange" on document.
+ * Atlas.dim(tab) is that tab's 2D/3D choice; Atlas.setDim(tab, d) saves it and fires "dimchange".
  */
 window.Atlas = window.Atlas || {};
 
 (function () {
   const VIEWER_URL = new URL("viewer3d.js", document.currentScript.src).href;
 
-  Atlas.dim = () => Atlas.store.get("dim", "3d");
-  /* Every view follows one choice: changing it anywhere fires "dimchange" on document. */
-  Atlas.setDim = (d) => {
-    if (d === Atlas.dim()) return;
-    Atlas.store.set("dim", d);
-    document.dispatchEvent(new CustomEvent("dimchange", { detail: d }));
+  /*
+   * Each tab remembers its own figure type. Atlas and Kata start flat: the 2D figures show front
+   * and back at once, with flow dashes, labels and kata lines that 3D lacks. Anatomy starts in 3D.
+   */
+  const DEFAULT_DIM = { atlas: "2d", kata: "2d", anatomy: "3d" };
+  Atlas.dim = (tab) => Atlas.store.get("dim:" + tab, DEFAULT_DIM[tab]);
+  /** Save a tab's choice; "dimchange" on document carries {tab, dim}. */
+  Atlas.setDim = (tab, d) => {
+    if (d === Atlas.dim(tab)) return;
+    Atlas.store.set("dim:" + tab, d);
+    document.dispatchEvent(new CustomEvent("dimchange", { detail: { tab, dim: d } }));
   };
 
   /** Resolves to a viewer, or to null after showing why it couldn't load. viewer.loaded resolves true or false. */
