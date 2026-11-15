@@ -20,6 +20,8 @@ const COLORS = {
 const FLOW_GAP = 0.06, FLOW_SPEED = 0.035;
 /* Point labels appear once the camera is this close to what it looks at, as the 2D figure shows them when zoomed. */
 const LABEL_DIST = 1.3;
+/* Two taps this close together (ms) are a double tap. */
+const DOUBLE_TAP_MS = 300;
 
 const draco = new DRACOLoader().setDecoderPath("vendor/three-0.186.1/examples/jsm/libs/draco/gltf/");
 const loader = new GLTFLoader().setDRACOLoader(draco);
@@ -91,7 +93,7 @@ export class Viewer3D {
     /* On touch screens one finger scrolls the page; two fingers turn and pinch-zoom the body. */
     if (Atlas.coarse) {
       this.controls.touches = { ONE: null, TWO: THREE.TOUCH.DOLLY_ROTATE };
-      Atlas.twoFingerGestures(canvas, host, "Two fingers to turn and zoom");
+      Atlas.twoFingerGestures(canvas, host, "Two fingers to turn and zoom · double-tap to center");
     }
     this.mats = {
       bones: material(COLORS.bones), muscles: material(COLORS.muscles), joints: material(COLORS.joints),
@@ -351,10 +353,13 @@ export class Viewer3D {
   bindPick(canvas) {
     const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
     let down = null;
-    const hit = (e) => {
+    const aim = (e) => {
       const r = canvas.getBoundingClientRect();
       ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
       ray.setFromCamera(ndc, this.camera);
+    };
+    const hit = (e) => {
+      aim(e);
       /* Points sit on the surface, so test them first; then the muscles under them. */
       if (this.groups.points && this.groups.points.visible) {
         const p = ray.intersectObjects([this.groups.points], true).find((x) => x.object.visible);
@@ -367,10 +372,7 @@ export class Viewer3D {
       /* Hiding works on any piece; opening needs a site muscle. */
       return id || (part && this.clickHides) ? { muscle: id, part } : null;
     };
-    canvas.addEventListener("pointerdown", (e) => { down = [e.clientX, e.clientY]; });
-    canvas.addEventListener("pointerup", (e) => {
-      if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
-      const h = hit(e);
+    const pick = (h) => {
       if (h && h.point && this.opts.onPoint) {
         this.picked = h.mesh; // focusPoint frames this copy of a bilateral point
         this.opts.onPoint(h.point);
@@ -378,6 +380,28 @@ export class Viewer3D {
       else if (h && h.part && this.clickHides) this.hideHit(h);
       else if (h && h.muscle && this.opts.onPick) this.opts.onPick(h.muscle);
       else if (h && h.bone) this.opts.onBone(h.bone);
+    };
+    /*
+     * On a touch screen a double tap centers the view on the spot tapped: the phone's way to
+     * pan, since two fingers turn the body. A single tap waits out the double-tap window first,
+     * so the first tap of a double tap doesn't also pick.
+     */
+    let lastTap = null, tapTimer = null;
+    canvas.addEventListener("pointerdown", (e) => { down = [e.clientX, e.clientY]; });
+    canvas.addEventListener("pointerup", (e) => {
+      if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+      if (e.pointerType !== "touch" || !Atlas.coarse) { pick(hit(e)); return; }
+      const now = performance.now();
+      if (lastTap && now - lastTap.t < DOUBLE_TAP_MS && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 30) {
+        clearTimeout(tapTimer);
+        lastTap = null;
+        aim(e);
+        this.centerOn(ray);
+        return;
+      }
+      const h = hit(e);
+      lastTap = { t: now, x: e.clientX, y: e.clientY };
+      tapTimer = setTimeout(() => { lastTap = null; pick(h); }, DOUBLE_TAP_MS);
     });
     canvas.addEventListener("pointermove", (e) => {
       if (e.buttons || !this.map || this.opts.quiet) return;
@@ -393,6 +417,16 @@ export class Viewer3D {
       canvas.style.cursor = pickable ? "pointer" : "grab";
     });
     canvas.addEventListener("pointerleave", () => { this.hover.hidden = true; });
+  }
+
+  /** Glide the view so the first visible surface along the ray sits at the center; the distance stays. */
+  centerOn(ray) {
+    const shown = (o) => { for (let x = o; x; x = x.parent) if (!x.visible) return false; return true; };
+    const groups = [this.groups.points, this.groups.muscles, this.groups.bones, this.groups.joints].filter(Boolean);
+    const h = ray.intersectObjects(groups, true).find((x) => shown(x.object) && x.object.material !== this.mats.faded);
+    if (!h) return;
+    const shift = h.point.clone().sub(this.controls.target);
+    this.tween(this.controls.target.clone().add(shift), this.camera.position.clone().add(shift));
   }
 
   resize() {
