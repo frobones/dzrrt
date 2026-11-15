@@ -54,14 +54,18 @@ export class Viewer3D {
   /**
    * @param {HTMLElement} host  element to render into; it should have a height
    * @param {{onPick?: (muscleId: string) => void, onPoint?: (pointId: string) => void,
-   *   onBone?: (piece: string) => void, quiet?: boolean, hlLabels?: boolean}} opts
+   *   onBone?: (piece: string) => void, quiet?: boolean, hlLabels?: boolean, onHidden?: (count: number) => void}} opts
    *   quiet: no name on hover. hlLabels: name only the highlighted and selected points.
+   *   onHidden: called with how many muscles are hidden by click, after each change.
    */
   constructor(host, opts = {}) {
     this.host = host;
     this.opts = opts;
     this.groups = {};
     this.focusParts = new Set();
+    this.hiddenParts = new Set();
+    this.hiddenKeys = new Set();
+    this.peel = 0;
     this.lit = new Set();
     this.spots = [];
     this.layerOn = { bones: true, muscles: true, joints: false };
@@ -106,6 +110,9 @@ export class Viewer3D {
     this.superficial = new Set(layers.superficial);
     this.partToMuscle = {};
     for (const id in map) for (const p of map[id].parts) this.partToMuscle[p] ??= id;
+    /* A model piece takes the outermost layer of the muscles it belongs to (Atlas.MUSCLE_LAYERS). */
+    this.partLayer = {};
+    for (const id in map) for (const p of map[id].parts) this.partLayer[p] = Math.min(this.partLayer[p] ?? 3, Atlas.MUSCLE_LAYERS[id]);
     await Promise.all(["bones", "muscles"].map((l) => this.addLayer(l)));
     const box = new THREE.Box3().setFromObject(this.groups.bones);
     this.body = { center: box.getCenter(new THREE.Vector3()), size: box.getSize(new THREE.Vector3()) };
@@ -137,10 +144,36 @@ export class Viewer3D {
     this.render();
   }
 
-  /** "all" muscles, or only the superficial ones so the deep layer shows. */
-  setDepth(depth) {
-    this.depth = depth;
+  /**
+   * Peel the muscles: hide every layer outside the given one (0 surface ... 3 deepest). Pieces
+   * that belong to no site muscle (tendons, retinacula, small face muscles) count as surface when
+   * Z-Anatomy files them as superficial, otherwise as the third layer. The focused muscle stays.
+   */
+  setPeel(level) {
+    this.peel = level;
     this.applyMuscleStyle();
+  }
+
+  /** In this mode a click hides the muscle under it instead of opening it. */
+  setClickHides(on) {
+    this.clickHides = on;
+  }
+
+  /** Hide a clicked muscle (every piece of it, both sides), or a piece no site muscle owns, with its mirror. */
+  hideHit({ muscle, part }) {
+    const names = muscle ? this.map[muscle].parts : [part, part.replace(/\.l$/, ".r"), part.replace(/\.r$/, ".l")];
+    names.forEach((n) => this.hiddenParts.add(n));
+    this.hiddenKeys.add(muscle || part.replace(/\.[lr]$/, ""));
+    this.applyMuscleStyle();
+    if (this.opts.onHidden) this.opts.onHidden(this.hiddenKeys.size);
+  }
+
+  /** Bring back every muscle hidden by click. */
+  showAll() {
+    this.hiddenParts.clear();
+    this.hiddenKeys.clear();
+    this.applyMuscleStyle();
+    if (this.opts.onHidden) this.opts.onHidden(0);
   }
 
   /**
@@ -175,7 +208,8 @@ export class Viewer3D {
     g.traverse((o) => {
       if (!o.isMesh) return;
       const n = partName(o), isFocus = this.focusParts.has(n);
-      o.visible = isFocus || this.depth !== "superficial" || this.superficial.has(n);
+      const layer = this.partLayer[n] ?? (this.superficial.has(n) ? 0 : 2);
+      o.visible = !this.hiddenParts.has(n) && (isFocus || layer >= this.peel);
       o.material = isFocus ? this.mats.focus : fadeRest ? this.mats.faded : this.mats.muscles;
       o.renderOrder = isFocus ? 1 : 0;
     });
@@ -324,8 +358,9 @@ export class Viewer3D {
       const targets = [this.groups.muscles, this.opts.onBone && this.groups.bones].filter((g) => g && g.visible);
       const h = ray.intersectObjects(targets, true).find((x) => x.object.visible && x.object.material !== this.mats.faded);
       if (h && h.object.userData.layer === "bones") return { bone: partName(h.object) };
-      const id = h && this.partToMuscle[partName(h.object)];
-      return id ? { muscle: id } : null;
+      const part = h && partName(h.object), id = part && this.partToMuscle[part];
+      /* Hiding works on any piece; opening needs a site muscle. */
+      return id || (part && this.clickHides) ? { muscle: id, part } : null;
     };
     canvas.addEventListener("pointerdown", (e) => { down = [e.clientX, e.clientY]; });
     canvas.addEventListener("pointerup", (e) => {
@@ -335,6 +370,7 @@ export class Viewer3D {
         this.picked = h.mesh; // focusPoint frames this copy of a bilateral point
         this.opts.onPoint(h.point);
       }
+      else if (h && h.part && this.clickHides) this.hideHit(h);
       else if (h && h.muscle && this.opts.onPick) this.opts.onPick(h.muscle);
       else if (h && h.bone) this.opts.onBone(h.bone);
     });
@@ -344,9 +380,11 @@ export class Viewer3D {
       const p = h && h.point && Atlas.POINTS[h.point];
       const m = h && h.muscle && Atlas.MUSCLES.find((x) => x.id === h.muscle);
       const b = h && h.bone && h.bone.replace(/\.[lr]$/, "");
-      const pickable = (p && this.opts.onPoint) || (m && this.opts.onPick) || b;
-      this.hover.textContent = p ? `${p.code || p.id} ${p.en}` : m ? m.n : b || "";
-      this.hover.hidden = !(p || m || b);
+      const piece = h && h.part && !m && h.part.replace(/\.[lr]$/, "");
+      const name = p ? `${p.code || p.id} ${p.en}` : m ? m.n : piece || b || "";
+      const pickable = (p && this.opts.onPoint) || (m && this.opts.onPick) || (h && h.part && this.clickHides) || b;
+      this.hover.textContent = h && h.part && this.clickHides ? `Hide ${name}` : name;
+      this.hover.hidden = !name;
       canvas.style.cursor = pickable ? "pointer" : "grab";
     });
     canvas.addEventListener("pointerleave", () => { this.hover.hidden = true; });

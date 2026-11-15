@@ -34,6 +34,8 @@ Atlas.views = Atlas.views || {};
     [/flex|extend|extension/i, "flex", "Flexion · extension"],
   ];
   const byId = Object.fromEntries(Atlas.MUSCLES.map((m) => [m.id, m]));
+  /* Peel slider stops, outermost first (Atlas.MUSCLE_LAYERS). */
+  const PEEL = ["Surface", "Second layer", "Third layer", "Deepest"];
   const PLATE = Object.fromEntries(Atlas.PLATES.map((p) => [p.id, p]));
   /*
    * Overview plates no single muscle or bone is drawn on, shown on the cards they explain:
@@ -118,8 +120,8 @@ Atlas.views = Atlas.views || {};
       if (!viewer) return;
       const t = e.target;
       if (t.dataset.layer) viewer.setLayer(t.dataset.layer, t.checked);
-      else if (t.dataset.opt === "sup") viewer.setDepth(t.checked ? "superficial" : "all");
       else if (t.dataset.opt === "fade") viewer.setFade(t.checked);
+      else if (t.dataset.opt === "clickhide") viewer.setClickHides(t.checked);
     });
     if (S.dim === "3d") start3d();
   }
@@ -238,15 +240,49 @@ Atlas.views = Atlas.views || {};
         ${figColumn("mus", `
           <label><input type="checkbox" data-layer="bones" checked> Bones</label>
           <label><input type="checkbox" data-layer="joints"> Ligaments</label>
-          <label><input type="checkbox" data-opt="sup"> Superficial only</label>
-          <label><input type="checkbox" data-opt="fade" checked> Fade others</label>`)}
+          <div class="v3d-peel" role="group" aria-label="Peel muscle layers">
+            <label for="mus-peel">Peel</label>
+            <button class="peel-step" type="button" data-peel="-1" aria-label="Put back one layer" disabled>‹</button>
+            <input type="range" id="mus-peel" min="0" max="3" step="1" value="0" aria-valuetext="${PEEL[0]}">
+            <button class="peel-step" type="button" data-peel="1" aria-label="Peel off one more layer">›</button>
+            <output id="mus-peel-out" for="mus-peel">${PEEL[0]}</output>
+          </div>
+          <label><input type="checkbox" data-opt="clickhide"> Hide on click</label>
+          <button class="chip" id="mus-showall" type="button" hidden>Show all</button>
+          <label><input type="checkbox" data-opt="fade"> Fade others</label>`)}
         <div class="panel anat-card" id="mus-card"></div>
       </div>`;
     const figs = figures($("#mus-figs"));
     const onPick = (id) => (list.some((m) => m.id === id) ? pick(id) : Atlas.anatomyGo(id));
-    const start3d = () => makeViewer($("#mus-3d"), { onPick })
-      .then((v) => whenLoaded(v, () => { v.setFade(true); showMuscle(byId[S.muscle], figs); }));
+    /* The Show all button counts the muscles hidden by click. */
+    const onHidden = (n) => {
+      $("#mus-showall").hidden = !n;
+      $("#mus-showall").textContent = `Show all (${n} hidden)`;
+    };
+    const peelTo = (v, level) => {
+      v.setPeel(level);
+      $("#mus-peel").value = level;
+      $("#mus-peel-out").textContent = PEEL[level];
+      $("#mus-peel").setAttribute("aria-valuetext", PEEL[level]);
+      $("#mus-tools [data-peel='-1']").disabled = level === 0;
+      $("#mus-tools [data-peel='1']").disabled = level === PEEL.length - 1;
+    };
+    /* A new viewer picks up the toolbar as it stands. */
+    const start3d = () => makeViewer($("#mus-3d"), { onPick, onHidden })
+      .then((v) => whenLoaded(v, () => {
+        v.setFade($("#mus-tools [data-opt='fade']").checked);
+        v.setClickHides($("#mus-tools [data-opt='clickhide']").checked);
+        peelTo(v, Number($("#mus-peel").value));
+        showMuscle(byId[S.muscle], figs);
+      }));
     bindFigures("mus", start3d, () => showMuscle(byId[S.muscle], figs));
+    $("#mus-peel").addEventListener("input", (e) => { if (viewer) peelTo(viewer, Number(e.target.value)); });
+    /* The arrows step one layer at a time, for anyone who doesn't spot the slider. */
+    $("#mus-tools").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-peel]");
+      if (b && viewer) peelTo(viewer, Math.max(0, Math.min(PEEL.length - 1, Number($("#mus-peel").value) + Number(b.dataset.peel))));
+    });
+    $("#mus-showall").addEventListener("click", () => { if (viewer) viewer.showAll(); });
     const renderList = (q = "") => {
       const ql = q.trim().toLowerCase();
       $("#mus-items").innerHTML = REGIONS.map(([label, regs]) => {
