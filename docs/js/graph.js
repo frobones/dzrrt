@@ -19,6 +19,31 @@ window.Atlas = window.Atlas || {};
   const TYPE_NAMES = { point: "point", channel: "channel", phase: "Five Phase", emotion: "emotion", kata: "kata step", muscle: "muscle" };
   Atlas.nodeTypeName = (t) => TYPE_NAMES[t];
 
+  /*
+   * Each kind of node has its own shape, so a web of mixed things reads at a glance; color
+   * stays the Five Phase, and a hollow shape has no phase. Each entry opens the outline's tag.
+   */
+  const f = (v) => v.toFixed(1);
+  const SHAPES = {
+    point: (x, y, r) => `<circle cx="${f(x)}" cy="${f(y)}" r="${f(r)}"`,
+    phase: (x, y, r) => `<circle cx="${f(x)}" cy="${f(y)}" r="${f(r * 1.45)}"`,
+    muscle: (x, y, r) => `<rect x="${f(x - r * 0.85)}" y="${f(y - r * 0.85)}" width="${f(r * 1.7)}" height="${f(r * 1.7)}"`,
+    kata: (x, y, r) => `<polygon points="${f(x)},${f(y - r * 1.2)} ${f(x + r * 1.2)},${f(y)} ${f(x)},${f(y + r * 1.2)} ${f(x - r * 1.2)},${f(y)}"`,
+    channel: (x, y, r) => `<rect x="${f(x - r * 1.2)}" y="${f(y - r * 0.65)}" width="${f(r * 2.4)}" height="${f(r * 1.3)}" rx="${f(r * 0.65)}"`,
+    emotion: (x, y, r) => `<polygon points="${f(x)},${f(y - r * 1.25)} ${f(x + r * 1.15)},${f(y + r * 0.75)} ${f(x - r * 1.15)},${f(y + r * 0.75)}"`,
+  };
+  Atlas.NODE_TYPES = Object.keys(SHAPES);
+  /** A node's shape at (x, y), about r across: an outline, with a filled core unless hollow. */
+  Atlas.nodeShape = (type, x, y, r, col, hollow) =>
+    `${SHAPES[type](x, y, r)} class="shape" fill="var(--surface)" stroke="${col}"${type === "phase" ? ' style="stroke-width:2"' : ""}/>`
+    + (hollow ? "" : `${SHAPES[type](x, y, r * 0.43)} fill="${col}" stroke="none"/>`);
+  /** A small inline icon of a node's shape, for chips and keys. */
+  Atlas.nodeGlyph = (type, col = "var(--muted)", hollow = false) =>
+    `<svg class="web-glyph" viewBox="-9 -9 18 18" aria-hidden="true">${Atlas.nodeShape(type, 0, 0, 5, col, hollow)}</svg>`;
+  /** The key to the shapes, for the given node types. */
+  Atlas.shapeKey = (types) => `<div class="legend web-phases"><span>Shape = kind:</span>${types.map((t) =>
+    `<span>${Atlas.nodeGlyph(t, "var(--muted)", t === "muscle" || t === "kata")}${TYPE_NAMES[t][0].toUpperCase() + TYPE_NAMES[t].slice(1)}</span>`).join("")}</div>`;
+
   let cache = null, cacheScope = null;
   document.addEventListener("scopechange", () => { cache = null; });
 

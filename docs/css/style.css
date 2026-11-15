@@ -62,7 +62,7 @@ button { cursor: pointer; }
 /* SVG controls (points, clock segments, phase and web nodes) show focus with their own ring, not a box. */
 svg [tabindex]:focus, svg [tabindex]:focus-visible { outline: none; }
 .pt-g:focus-visible .pt-ring { opacity: 1; stroke: var(--accent); stroke-width: calc(2px * var(--k, 1)); }
-.web .node:focus-visible circle, .phase-node:focus-visible circle, .clock .seg-path:focus-visible path { stroke: var(--accent); stroke-width: 3; }
+.web .node:focus-visible .shape, .phase-node:focus-visible circle, .clock .seg-path:focus-visible path { stroke: var(--accent); stroke-width: 3; }
 h1, h2, h3 { font-family: var(--f-display); font-weight: 700; text-wrap: balance; margin: 0; line-height: 1.2; }
 .mono { font-family: var(--f-mono); }
 .muted { color: var(--muted); }
@@ -238,7 +238,10 @@ a.pt, button.pt {
 .web { width: 100%; height: auto; display: block; }
 .web text { font: 500 9px var(--f-body); fill: var(--ink); }
 .web .node { cursor: pointer; }
-.web .node circle { stroke-width: 1.2; }
+.web .node .shape { stroke-width: 1.2; }
+.web-glyph { width: 15px; height: 15px; flex: none; vertical-align: -3px; }
+.web-glyph .shape { stroke-width: 1.5; }
+.legend span:has(.web-glyph) { display: inline-flex; align-items: center; gap: 4px; }
 .web .edge, .web-key .edge { fill: none; stroke: var(--muted); stroke-width: 1.4; }
 :is(.web, .web-key) .edge-related { stroke-dasharray: 5 4; }
 :is(.web, .web-key) .edge-kata { stroke-dasharray: 0.1 4; stroke-linecap: round; stroke-width: 2.4; }
@@ -253,6 +256,13 @@ a.pt, button.pt {
 .web-dot { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid currentColor; background: radial-gradient(circle, currentColor 0 2.5px, transparent 3px); }
 .web-dot.hollow { color: var(--muted); background: none; }
 .web .center-text { font: 600 12px var(--f-mono); }
+.cx-web .center-text { font: 600 13px var(--f-body); }
+.cx-web .center-type { font-size: 10px; fill: var(--muted); }
+.cx-web .halo { paint-order: stroke; stroke: var(--surface); stroke-width: 4px; }
+.cx-center .shape { stroke-width: 2.5; }
+.cx-type { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.cx-type .web-glyph { width: 18px; height: 18px; }
+.chip .web-glyph, .cx-pill .web-glyph, .cx-trail .web-glyph { margin-right: 4px; }
 :is(.web, .web-key) .edge-anatomy { stroke-dasharray: 6 2.5 1.2 2.5 1.2 2.5; }
 :is(.web, .web-key) .edge-cycle { stroke-dasharray: 12 4; }
 
