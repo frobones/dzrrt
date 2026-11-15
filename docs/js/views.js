@@ -44,7 +44,9 @@ Atlas.views = Atlas.views || {};
       $("#kata-fig").hidden = dim === "3d";
       $("#kata-3d").hidden = dim !== "3d";
       if (dim === "3d") {
-        if (!fig3d) fig3d = new Atlas.Figure3D($("#kata-3d"), { onPoint: (id) => Atlas.go("atlas", id) });
+        if (!fig3d) fig3d = new Atlas.Figure3D($("#kata-3d"), { onPoint: (id) => Atlas.go("atlas", id), hlLabels: true });
+        fig3d.clearOverlay();
+        if (s.lines) fig3d.drawKataLines();
         fig3d.highlight(s.ch, s.pts);
         fig3d.filterPoints((p) => s.pts.includes(p.id) || s.ch.includes(p.ch));
         fig3d.showChannels(s.ch.length ? new Set(s.ch) : null);

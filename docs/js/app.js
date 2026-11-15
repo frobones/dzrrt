@@ -152,11 +152,14 @@ window.Atlas = window.Atlas || {};
       $("#atlas-dim").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.dim === dim)));
       $("#atlas-figs").hidden = dim === "3d";
       $("#atlas-3d").hidden = dim !== "3d";
-      $("#flow").closest("label").hidden = $("#labels").closest("label").hidden = dim === "3d";
       $("#atlas-help").textContent = (dim === "3d"
         ? "Drag to turn the body, scroll or pinch to zoom, right-drag to move. Points sit on the muscle surface. "
         : "Scroll or pinch to zoom, drag to pan. ") + "Positions are approximate study guides; always locate points by palpation.";
-      if (dim === "3d" && !A.fig3d) A.fig3d = new Atlas.Figure3D($("#atlas-3d"), { onPoint });
+      if (dim === "3d" && !A.fig3d) {
+        A.fig3d = new Atlas.Figure3D($("#atlas-3d"), { onPoint });
+        A.fig3d.setFlow($("#flow").checked);
+        A.fig3d.setLabels($("#labels").checked);
+      }
       A.figs = dim === "3d" ? [A.fig3d] : A.figs2d;
       refresh();
       if (A.sel) selectPoint(A.sel, false);
@@ -170,8 +173,10 @@ window.Atlas = window.Atlas || {};
       $("#layer").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
       refresh();
     });
-    $("#flow").addEventListener("change", (e) => A.figs.forEach((f) => f.setFlow(e.target.checked)));
-    $("#labels").addEventListener("change", (e) => A.figs.forEach((f) => f.setLabels(e.target.checked)));
+    /* Both figure types follow these, so switching between 2D and 3D keeps them. */
+    const allFigs = () => [...A.figs2d, A.fig3d].filter(Boolean);
+    $("#flow").addEventListener("change", (e) => allFigs().forEach((f) => f.setFlow(e.target.checked)));
+    $("#labels").addEventListener("change", (e) => allFigs().forEach((f) => f.setLabels(e.target.checked)));
     $("#chs").addEventListener("click", (e) => {
       const b = e.target.closest("[data-ch]"); if (!b) return;
       const c = b.dataset.ch;

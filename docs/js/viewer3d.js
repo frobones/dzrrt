@@ -14,8 +14,12 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 const MODELS = "models/";
 const COLORS = {
   bones: 0xe9e1cf, muscles: 0xa9443c, joints: 0x8fb39a, origin: 0xd94b2b, insertion: 0x2f6fd6, focus: 0xff8a3d,
-  ligament: 0x3f8f5a, spot: 0x24324d,
+  ligament: 0x3f8f5a, spot: 0x24324d, kataLine: 0xffc266,
 };
+/* Flow arrows sit FLOW_GAP metres apart along each channel and travel FLOW_SPEED metres a second. */
+const FLOW_GAP = 0.06, FLOW_SPEED = 0.035;
+/* Point labels appear once the camera is this close to what it looks at, as the 2D figure shows them when zoomed. */
+const LABEL_DIST = 1.3;
 
 const draco = new DRACOLoader().setDecoderPath("vendor/three-0.186.1/examples/jsm/libs/draco/gltf/");
 const loader = new GLTFLoader().setDRACOLoader(draco);
@@ -50,7 +54,8 @@ export class Viewer3D {
   /**
    * @param {HTMLElement} host  element to render into; it should have a height
    * @param {{onPick?: (muscleId: string) => void, onPoint?: (pointId: string) => void,
-   *   onBone?: (piece: string) => void, quiet?: boolean}} opts  quiet: no name on hover
+   *   onBone?: (piece: string) => void, quiet?: boolean, hlLabels?: boolean}} opts
+   *   quiet: no name on hover. hlLabels: name only the highlighted and selected points.
    */
   constructor(host, opts = {}) {
     this.host = host;
@@ -233,8 +238,7 @@ export class Viewer3D {
 
   /** Replace the landmark dots and their labels. */
   setSpots(spots) {
-    for (const s of this.spots) this.scene.remove(s.mesh);
-    this.labels.textContent = "";
+    for (const s of this.spots) { this.scene.remove(s.mesh); s.el.remove(); }
     const dot = (this.spotGeo ??= new THREE.SphereGeometry(0.0055, 14, 10));
     const rim = (this.spotRim ??= new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.BackSide }));
     this.spots = spots.map(({ p, label }) => {
@@ -368,18 +372,31 @@ export class Viewer3D {
   }
 
   /*
-   * Landmark labels follow their dots on screen, and hide once the bone surface under the
-   * dot turns well away from the camera; a spot on the side of a bone, seen edge-on, keeps its label.
+   * Labels (landmark spots, point names, kata line numbers) follow their anchors on screen, and
+   * hide once the surface under the anchor turns well away from the camera; a spot on the side
+   * of a bone, seen edge-on, keeps its label. A tag's want() decides whether it shows at all.
    */
   placeLabels() {
-    if (!this.spots.length) return;
+    const tags = [...this.spots, ...(this.ptTags || []), ...(this.kataTags || [])];
+    if (!tags.length) return;
     const { clientWidth: w, clientHeight: h } = this.host, v = new THREE.Vector3();
-    for (const s of this.spots) {
-      const facing = s.normal.dot(v.copy(this.camera.position).sub(s.mesh.position).normalize()) > -0.3;
-      v.copy(s.mesh.position).project(this.camera);
-      s.el.hidden = !facing || v.z > 1;
-      s.el.style.transform = `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * h}px)`;
+    const near = this.camera.position.distanceTo(this.controls.target) < LABEL_DIST;
+    for (const t of tags) {
+      if (t.want && !t.want(near)) { t.el.hidden = true; continue; }
+      const facing = t.normal.dot(v.copy(this.camera.position).sub(t.mesh.position).normalize()) > -0.3;
+      v.copy(t.mesh.position).project(this.camera);
+      t.el.hidden = !facing || v.z > 1;
+      t.el.style.transform = `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * h}px)`;
     }
+  }
+
+  /** A label element in the overlay; cls styles point names and kata line numbers apart from landmarks. */
+  tag(text, cls = "") {
+    const el = document.createElement("span");
+    el.textContent = text;
+    if (cls) el.className = cls;
+    this.labels.append(el);
+    return el;
   }
 
   /* ---------- Points and channels (data from docs/js/data/body-3d.js) ---------- */
@@ -419,12 +436,21 @@ export class Viewer3D {
         return m;
       });
     }
+    /* Each copy of a point gets a name tag, shown when zoomed in or when labels are forced on. */
+    this.ptTags = Object.entries(this.pointMeshes).flatMap(([id, ms]) => ms.map((mesh) => ({
+      mesh, normal: mesh.userData.normal, el: this.tag(Atlas.POINTS[id].code || id, "v3d-pt"),
+      want: (near) => mesh.visible && (this.labelsOn || near) && (!this.opts.hlLabels || this.hlPts.has(id) || id === this.selected),
+    })));
+    /* Arrowheads are wider than the 3.4 mm line and paler than it, so they stand out along it. */
+    const arrow = new THREE.ConeGeometry(0.0078, 0.02, 10);
+    this.flows = [];
     const channels = new THREE.Group();
     this.chMeshes = {};
     for (const code in Atlas.CH3D) {
       const color = colorOf(code);
       const thin = material(color, { emissive: color.clone().multiplyScalar(0.3) });
       const band = material(color, { transparent: true, opacity: 0.28, depthWrite: false });
+      const flowMat = material(color.clone().lerp(new THREE.Color(0xffffff), 0.55), { emissive: color.clone().multiplyScalar(0.35) });
       this.chMeshes[code] = Atlas.CH3D[code].map((line) => {
         const curve = new THREE.CatmullRomCurve3(line.map((q) => new THREE.Vector3(...q)));
         const segs = Math.max(8, line.length * 2);
@@ -433,6 +459,13 @@ export class Viewer3D {
         const sinew = new THREE.Mesh(new THREE.TubeGeometry(curve, segs, 0.011, 8), band);
         sinew.userData.sinew = true;
         g.add(sinew);
+        /* Arrowheads along the line show which way Qi flows; they travel when flow is on. */
+        const length = curve.getLength(), n = Math.max(2, Math.floor(length / FLOW_GAP));
+        const flow = new THREE.InstancedMesh(arrow, flowMat, n);
+        flow.userData = { flow: true, curve, length, n, reverse: false };
+        flow.raycast = () => {};
+        g.add(flow);
+        this.flows.push(flow);
         channels.add(g);
         return g;
       });
@@ -441,7 +474,86 @@ export class Viewer3D {
     this.groups.points = points;
     this.groups.channels = channels;
     this.channelLayer = "primary";
+    this.hlPts = new Set();
+    this.flowOn = false;
+    this.flowStart = performance.now();
     this.applyBody();
+  }
+
+  /** Move the arrowheads along their channels; t is seconds since flow started. */
+  placeFlow(t) {
+    const dummy = new THREE.Object3D(), up = new THREE.Vector3(0, 1, 0), tan = new THREE.Vector3();
+    const shift = (t * FLOW_SPEED) % FLOW_GAP;
+    for (const f of this.flows) {
+      if (!f.visible) continue;
+      const { curve, length, n, reverse } = f.userData;
+      for (let i = 0; i < n; i++) {
+        let u = ((i * FLOW_GAP + shift) % length) / length;
+        if (reverse) u = 1 - u;
+        curve.getPointAt(u, dummy.position);
+        curve.getTangentAt(u, tan);
+        if (reverse) tan.negate();
+        dummy.quaternion.setFromUnitVectors(up, tan);
+        dummy.updateMatrix();
+        f.setMatrixAt(i, dummy.matrix);
+      }
+      f.instanceMatrix.needsUpdate = true;
+    }
+  }
+
+  /**
+   * Show the flow arrows, moving unless the reader prefers reduced motion. The model then
+   * redraws every frame, so the loop pauses while the page or the viewer is hidden.
+   */
+  setFlow(on) {
+    this.flowOn = on;
+    this.applyBody();
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    this.placeFlow(0);
+    this.render();
+    if (!on || still || this.flowLoop) return;
+    const tick = (now) => {
+      if (!this.flowOn || this.disposed) { this.flowLoop = null; return; }
+      /* About 30 frames a second is smooth enough for slow arrows and spares phone batteries. */
+      if (!document.hidden && this.host.offsetParent && now - (this.flowDrawn || 0) >= 32) {
+        this.flowDrawn = now;
+        this.placeFlow((now - this.flowStart) / 1000);
+        this.render();
+      }
+      this.flowLoop = requestAnimationFrame(tick);
+    };
+    this.flowLoop = requestAnimationFrame(tick);
+  }
+
+  /** Force every visible point's name on, as the 2D "Always show labels" does. */
+  setPointLabels(on) {
+    this.labelsOn = on;
+    this.render();
+  }
+
+  /** The three kata back lines (Atlas.KATA3D), dashed down both sides of the spine, numbered on the client's left. */
+  setKataLines(on) {
+    if (on && !this.kataGroup) {
+      const mat = material(COLORS.kataLine, { emissive: 0x6a3a00 });
+      this.kataGroup = new THREE.Group();
+      this.kataTags = [];
+      /* The numbers step down the lines, so the three close-set tops don't overlap. */
+      Atlas.KATA3D.forEach(({ n, lines }, k) => {
+        for (const line of lines) {
+          /* Lines 2 and 3 run on the Bladder channel, so they sit a little further out and wider to show over it. */
+          const curve = new THREE.CatmullRomCurve3(line.map(([x, y, z]) => new THREE.Vector3(x, y, z - 0.004)));
+          this.kataGroup.add(new THREE.Mesh(new THREE.TubeGeometry(curve, line.length * 2, 0.0045, 8), mat));
+        }
+        const left = lines.reduce((a, b) => (b[0][0] > a[0][0] ? b : a));
+        const mesh = new THREE.Object3D();
+        mesh.position.set(...left[Math.min(left.length - 1, k * 4)]);
+        this.kataGroup.add(mesh);
+        this.kataTags.push({ mesh, normal: new THREE.Vector3(0, 0, -1), el: this.tag(n, "v3d-kata"), want: () => this.kataGroup.visible });
+      });
+      this.scene.add(this.kataGroup);
+    }
+    if (this.kataGroup) this.kataGroup.visible = on;
+    this.render();
   }
 
   /** Same contract as the 2D figure: which channels show, which points pass the filter, what is highlighted. */
@@ -464,6 +576,12 @@ export class Viewer3D {
       for (const g of this.chMeshes[code]) {
         g.visible = on;
         g.children.forEach((m) => {
+          if (m.userData.flow) {
+            /* As in 2D: the primary and both layers flow with the primary channel, the sinew layer its own way. */
+            m.visible = this.flowOn;
+            m.userData.reverse = this.channelLayer === "sinew" && Boolean(Atlas.CHANNELS[code].sinewReverse);
+            return;
+          }
           m.visible = m.userData.sinew ? this.channelLayer !== "primary" : this.channelLayer !== "sinew";
           const transparent = m.userData.sinew || Boolean(dim);
           m.material.opacity = m.userData.sinew ? (dim ? 0.08 : 0.28) : dim ? 0.25 : 1;
@@ -471,6 +589,7 @@ export class Viewer3D {
         });
       }
     }
+    if (this.flowOn) this.placeFlow(this.flowLoop ? (performance.now() - this.flowStart) / 1000 : 0);
     // Points live on the primary channels, so the sinew-only layer hides them, as in 2D.
     const showPts = this.channelLayer !== "sinew";
     for (const id in this.pointMeshes) {
@@ -514,7 +633,9 @@ export class Viewer3D {
 
   /** Release the WebGL context; browsers allow only a few at once. */
   dispose() {
+    this.disposed = true;
     cancelAnimationFrame(this.anim);
+    cancelAnimationFrame(this.flowLoop);
     this.controls.dispose();
     this.renderer.dispose();
     this.renderer.forceContextLoss();

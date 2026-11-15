@@ -350,7 +350,7 @@ Then open `http://localhost:8765`. `.claude/launch.json` defines the same server
 | `docs/css/style.css` | All styles. Colors are tokens on `:root`, with dark mode overrides |
 | `docs/js/data/channels.js` | Channels, their drawn paths, horary times, and point categories |
 | `docs/js/data/points-1.js`, `points-2.js` | The points. The field list is documented at the top of `points-1.js` |
-| `docs/js/data/kata.js` | The 60 kata steps and the zoom regions |
+| `docs/js/data/kata.js` | The 60 kata steps, the zoom regions, and the three kata back lines |
 | `docs/js/data/theory.js` | Five Phases, emotions, pain types, channel layers, depth zones |
 | `docs/js/data/lenses.js` | Two Lenses content: ground rules, frame shifts, complaints, muscle map, terms |
 | `docs/js/data/anatomy-muscles.js` | The 188 chapter 3 muscles: attachments, action, nerve, exam flag, and origin/insertion landmarks for the figure |
@@ -366,7 +366,7 @@ Then open `http://localhost:8765`. `.claude/launch.json` defines the same server
 | `tools/anatomy/` | Scripts that build the 3D data from the Z-Anatomy file: `export_models.py` and `map_muscles.py` make `docs/models/`; `dump_2d.mjs` and `project_2d.py` make `body-3d.js`; `anatomy_3d.py` makes `anatomy-3d.js` |
 | `docs/js/viewer3d.js` | The 3D viewer (an ES module, loaded on demand): muscles, bones, joints, attachments, points and channels |
 | `docs/js/figure3d.js` | Loads the viewer, wraps it in the 2D figure's methods (`Atlas.Figure3D`), and holds the shared 2D/3D choice |
-| `docs/js/data/body-3d.js` | Generated 3D positions for the points, channel paths and kata regions |
+| `docs/js/data/body-3d.js` | Generated 3D positions for the points, channel paths, kata regions and kata back lines |
 | `docs/js/data/anatomy-3d.js` | Generated: where each Anatomy landmark sits on the 3D bones, and which model pieces make up each bone and joint |
 | `docs/vendor/three-0.186.1/` | three.js 0.186.1 (MIT) with its glTF and Draco loaders, orbit controls, and the Draco decoder (Apache-2.0) |
 | `docs/js/terms.js` | The Body Terms view and its movement diagrams |
@@ -387,7 +387,7 @@ The Atlas, Kata and Anatomy views offer a 3D/2D toggle, and each tab remembers i
 choice (`Atlas.dim(tab)`). Atlas and Kata start in 2D, Anatomy in 3D. Other figures
 (Body Clock, Five Phases, Study, Two Lenses, Body Terms) stay 2D.
 
-**When point or channel positions change in 2D, regenerate the 3D positions:**
+**When point, channel or kata line positions change in 2D, regenerate the 3D positions:**
 
 ```bash
 node tools/anatomy/dump_2d.mjs > temp/proj/input.json
