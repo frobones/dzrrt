@@ -16,6 +16,23 @@ window.Atlas = window.Atlas || {};
   };
   Atlas.store = store;
 
+  /* ---------- Exam scope ---------- */
+  /*
+   * One site-wide choice: Exam narrows each page to what the written exams cover, Everything
+   * shows it all. Changing it anywhere updates every switch and fires "scopechange" on document.
+   */
+  Atlas.examOnly = () => store.get("exam", true);
+  Atlas.setExam = (on) => {
+    if (on === Atlas.examOnly()) return;
+    store.set("exam", on);
+    document.querySelectorAll("[data-scope]").forEach((b) => b.setAttribute("aria-pressed", String((b.dataset.scope === "exam") === on)));
+    document.dispatchEvent(new CustomEvent("scopechange", { detail: on }));
+  };
+  /** The Exam | Everything switch. tip says what Exam keeps on this page. */
+  Atlas.scopeSwitch = (tip) => `<div class="seg scope-seg" role="group" aria-label="Show exam material or everything">
+    <button data-scope="exam" title="${esc(tip)}" aria-pressed="${Atlas.examOnly()}">Exam</button><button data-scope="all" aria-pressed="${!Atlas.examOnly()}">Everything</button></div>`;
+  document.addEventListener("click", (e) => { const b = e.target.closest("[data-scope]"); if (b) Atlas.setExam(b.dataset.scope === "exam"); });
+
   const code = (id) => (Atlas.POINTS[id] && Atlas.POINTS[id].code) || id;
   Atlas.code = code;
   const ptLink = (id) => (Atlas.POINTS[id] ? `<button class="pt" data-pt="${id}">${esc(code(id))}</button>` : `<span class="mono">${esc(id)}</span>`);
@@ -73,7 +90,7 @@ window.Atlas = window.Atlas || {};
   });
 
   /* ---------- Atlas view ---------- */
-  const A = { figs: [], figs2d: [], fig3d: null, dim: Atlas.dim(), chans: new Set(Object.keys(Atlas.CHANNELS)), cats: new Set(), course: false, q: "", layer: "primary", sel: null };
+  const A = { figs: [], figs2d: [], fig3d: null, dim: Atlas.dim(), chans: new Set(Object.keys(Atlas.CHANNELS)), cats: new Set(), course: Atlas.examOnly(), q: "", layer: "primary", sel: null };
 
   function initAtlas() {
     const root = $("#view-atlas");
@@ -105,7 +122,8 @@ window.Atlas = window.Atlas || {};
           </div>
           <div class="panel">
             <h3>Point types</h3>
-            <label class="toggle" style="margin-bottom:8px"><input type="checkbox" id="course"> Course points only</label>
+            ${Atlas.scopeSwitch("Exam: the points the course names. Everything adds the classical points that link the channels.")}
+            <p class="muted" style="font-size:12.5px;margin:6px 0 8px">Exam shows the points the course names; Everything adds the classical points.</p>
             <div class="chips" id="cats">${catBtns}</div>
           </div>
         </aside>
@@ -164,7 +182,7 @@ window.Atlas = window.Atlas || {};
     });
     $("#ch-all").addEventListener("click", () => { A.chans = new Set(Object.keys(Atlas.CHANNELS)); refresh(); });
     $("#ch-none").addEventListener("click", () => { A.chans = new Set(); refresh(); });
-    $("#course").addEventListener("change", (e) => { A.course = e.target.checked; refresh(); });
+    document.addEventListener("scopechange", (e) => { A.course = e.detail; refresh(); });
     $("#cats").addEventListener("click", (e) => {
       const b = e.target.closest("[data-cat]"); if (!b) return;
       const k = b.dataset.cat;

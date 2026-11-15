@@ -6,6 +6,11 @@ each one to the kata, the Five Phases, and the course's pain and emotion materia
 
 ## Views
 
+An **Exam | Everything** switch on the Atlas, Study and Anatomy pages narrows each one
+to what the written exams cover: the points the course names, and the muscles and
+bones in the anatomy study guide (Handbook 4.54). It starts on Exam, and one
+choice applies across the site.
+
 - **Atlas.** A 3D body you can turn, with every course point plus the classical points
   that link the channels, sitting on the muscle surface. A 2D toggle shows the flat
   front and back figures instead, and the choice carries across the Atlas, Kata and
@@ -54,17 +59,23 @@ each one to the kata, the Five Phases, and the course's pain and emotion materia
   - **Hide definitions** turns the page into a self-test
 - **Anatomy.** Bones and muscles from *Netter's Anatomy Coloring Book*, the course's
   anatomy text, cited by plate:
-  - a muscle explorer that defaults to the Chuden exam list (Handbook 4.54-4.61) and
+  - a muscle explorer that defaults to the Chuden exam list (Handbook 4.55-4.61) and
     can show all 188 muscles. Each muscle shows its origin, insertion, action and
     nerve, and the channels, points and kata steps over it
   - a 3D body you can rotate, which highlights the chosen muscle with its origin and
     insertion on the bones, peels away to the deep muscles, and shows the ligaments.
     Click any muscle on the model to open it. A 2D toggle shows its line of pull on
     the flat figure instead
-  - bones and joints, with the palpable landmarks from Handbook 4.6 marked on the
-    figure and the muscles that attach to each bone
-  - the Handbook 4.52 plate coloring checklist, saved in your browser
-  - a quiz that names the muscle from its attachments, or picks its action
+  - bones and joints on the 3D skeleton: pick a bone, or click one on the model, to
+    light it and mark its landmarks; the palpable landmarks from Handbook 4.64 are
+    marked too, and each joint can show its ligaments. A Landmarks switch hides the
+    dots so you can find them yourself first. Each bone lists the muscles that
+    attach to it. A 2D toggle marks the landmarks on the flat figure instead
+  - the book's summary of each plate, and its clinical notes, on the muscle and bone
+    cards
+  - a quiz that names the muscle from its attachments, or picks its action, beside the
+    3D body. When you name a muscle, the body stays blank until you ask for a hint or
+    answer, then shows the muscle with its origin and insertion
   - the Atlas point panel lists the muscles under each point
 
 ## Running locally

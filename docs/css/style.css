@@ -472,16 +472,6 @@ rect.d-mv { stroke: none; fill: var(--accent); opacity: 0.85; }
 .lm text { font: 500 8px var(--f-body); fill: var(--ink); paint-order: stroke; stroke: var(--paper); stroke-width: 3px; }
 .joint { border-top: 1px solid var(--line); padding-top: 10px; display: grid; gap: 4px; font-size: 14px; }
 .joint h4 { margin: 0; font-size: 15px; }
-.plate-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; align-items: start; }
-.plate-cols h3 { font-size: 18px; }
-.plate-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
-.plate-list details { display: grid; gap: 6px; }
-.plate-list details > :not(summary) { margin: 6px 0 0 28px; }
-.plate-list summary { list-style: none; cursor: pointer; }
-.plate-list summary::-webkit-details-marker { display: none; }
-.plate-row { display: flex; gap: 8px; align-items: baseline; }
-.plate-row input { width: 18px; height: 18px; flex: none; align-self: center; }
-.plate-id { font-family: var(--f-mono); font-size: 13px; color: var(--muted); min-width: 34px; }
 .anat-quiz { display: grid; gap: 12px; max-width: 760px; }
 #aq { display: grid; gap: 10px; }
 .aq-prompt { font-size: 18px; margin: 0; }
@@ -495,9 +485,21 @@ rect.d-mv { stroke: none; fill: var(--accent); opacity: 0.85; }
 .v3d-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .v3d-tools { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 13.5px; }
 .v3d-tools[hidden] { display: none; }
-.v3d-tools label { display: inline-flex; gap: 5px; align-items: center; }
-#mus-3d { height: calc(100vh - 230px); min-height: 420px; }
-#mus-3d[hidden] { display: none; }
+.v3d-tools label, .v3d-opt { display: inline-flex; gap: 5px; align-items: center; }
+.v3d-opt { font-size: 13.5px; }
+.v3d-host { height: calc(100vh - 230px); min-height: 420px; }
+.v3d-host[hidden] { display: none; }
+.anat-figcol .figures[hidden] { display: none; }
+.anat-quiz-grid { display: grid; grid-template-columns: minmax(0, 760px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.anat-quiz-grid .anat-quiz { position: sticky; top: 76px; }
+#aq-3d { height: min(72vh, 680px); }
+.aq-where { margin: 0; font-size: 13px; }
+.plate-more summary { cursor: pointer; font-weight: 600; }
+.plate-more p { margin: 6px 0 0; }
+.aq-where:empty { display: none; }
+.v3d-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.v3d-labels span { position: absolute; left: 0; top: 0; margin: -10px 0 0 10px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 5px; background: color-mix(in srgb, var(--surface) 90%, transparent); color: var(--ink); font-size: 12px; white-space: nowrap; }
+.v3d-labels span[hidden] { display: none; }
 .v3d { position: relative; border: 1px solid var(--line); border-radius: var(--r); background: radial-gradient(ellipse at 50% 40%, var(--surface) 0%, var(--surface-2) 100%); overflow: hidden; }
 .v3d canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
 .v3d-status { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 20px; text-align: center; color: var(--muted); }
@@ -525,8 +527,10 @@ rect.d-mv { stroke: none; fill: var(--accent); opacity: 0.85; }
   .anat-grid .figures { order: 1; }
   .anat-grid .fig-dim { display: none; }
   .anat-card { order: 2; }
-  #mus-figs .figure svg, #bone-figs .figure svg { max-height: 60vh; }
-  #mus-3d { height: 62vh; min-height: 360px; }
+  #mus-figs .figure svg, #bone-figs .figure svg, #aq-figs .figure svg { max-height: 60vh; }
+  .v3d-host, #aq-3d { height: 62vh; min-height: 360px; }
+  .anat-quiz-grid { grid-template-columns: minmax(0, 1fr); }
+  .anat-quiz-grid .anat-quiz { position: static; }
   .body3d { height: 62vh; min-height: 360px; }
 }
 

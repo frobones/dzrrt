@@ -334,4 +334,5 @@ def render(prefix: str, points: dict, channels: dict) -> None:
         bpy.ops.render.render(write_still=True, scene=scn.name)
 
 
-main()
+if __name__ == "__main__":
+    main()

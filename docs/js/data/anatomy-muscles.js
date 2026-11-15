@@ -4,7 +4,7 @@
  *
  * Fields: n name, plate, region, group, o origin, i insertion, a action, nerve,
  * note (clinical or functional remark), exam (true, or the group name, when the
- * muscle is on the Chuden exam list, Handbook 4.54-4.61), v the figure that shows
+ * muscle is on the Chuden exam list, Handbook 4.55-4.61), v the figure that shows
  * it, ol/il the origin and insertion landmarks (Atlas.LANDMARKS) for the line of pull.
  * Muscles without v have no figure: they are internal or too small to place.
  */

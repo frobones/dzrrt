@@ -12,7 +12,10 @@ import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 const MODELS = "models/";
-const COLORS = { bones: 0xe9e1cf, muscles: 0xa9443c, joints: 0x8fb39a, origin: 0xd94b2b, insertion: 0x2f6fd6, focus: 0xff8a3d };
+const COLORS = {
+  bones: 0xe9e1cf, muscles: 0xa9443c, joints: 0x8fb39a, origin: 0xd94b2b, insertion: 0x2f6fd6, focus: 0xff8a3d,
+  ligament: 0x3f8f5a, spot: 0x24324d,
+};
 
 const draco = new DRACOLoader().setDecoderPath("vendor/three-0.186.1/examples/jsm/libs/draco/gltf/");
 const loader = new GLTFLoader().setDRACOLoader(draco);
@@ -36,6 +39,8 @@ function loadMaps() {
 
 /* GLTFLoader sanitizes node names ("Trapezius muscle.l" -> "Trapezius_musclel") and keeps the original here. */
 const partName = (o) => o.userData.name ?? o.name;
+/* Paired pieces are named for the client's left (".l", +x); this swaps one to the right. */
+const toRight = (n) => n.replace(/\.l$/, ".r");
 
 function material(color, opts = {}) {
   return new THREE.MeshStandardMaterial({ color, roughness: 0.62, metalness: 0, ...opts });
@@ -44,18 +49,24 @@ function material(color, opts = {}) {
 export class Viewer3D {
   /**
    * @param {HTMLElement} host  element to render into; it should have a height
-   * @param {{onPick?: (muscleId: string) => void, onPoint?: (pointId: string) => void}} opts
+   * @param {{onPick?: (muscleId: string) => void, onPoint?: (pointId: string) => void,
+   *   onBone?: (piece: string) => void, quiet?: boolean}} opts  quiet: no name on hover
    */
   constructor(host, opts = {}) {
     this.host = host;
     this.opts = opts;
     this.groups = {};
     this.focusParts = new Set();
+    this.lit = new Set();
+    this.spots = [];
+    this.layerOn = { bones: true, muscles: true, joints: false };
     host.classList.add("v3d");
     host.innerHTML = `<canvas aria-label="3D model of the body. Drag to rotate, scroll or pinch to zoom."></canvas>
+      <div class="v3d-labels" aria-hidden="true"></div>
       <div class="v3d-status" role="status">Loading the 3D model…</div><div class="v3d-hover" aria-hidden="true"></div>`;
     this.status = host.querySelector(".v3d-status");
     this.hover = host.querySelector(".v3d-hover");
+    this.labels = host.querySelector(".v3d-labels");
     const canvas = host.querySelector("canvas");
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -74,6 +85,10 @@ export class Viewer3D {
       focus: material(COLORS.focus, { emissive: 0x5a1e00 }),
       origin: material(COLORS.origin, { emissive: 0x3a0a00, polygonOffset: true, polygonOffsetFactor: -2 }),
       insertion: material(COLORS.insertion, { emissive: 0x001a3a, polygonOffset: true, polygonOffsetFactor: -2 }),
+      litBone: material(COLORS.focus, { emissive: 0x5a1e00 }),
+      ligament: material(COLORS.ligament, { emissive: 0x0b2a14 }),
+      capsule: material(COLORS.ligament, { transparent: true, opacity: 0.3, depthWrite: false }),
+      spot: material(COLORS.spot, { emissive: 0x0a1020, roughness: 0.4 }),
     };
     new ResizeObserver(() => this.resize()).observe(host);
     this.bindPick(canvas);
@@ -105,13 +120,15 @@ export class Viewer3D {
     });
     this.scene.add(group);
     this.groups[name] = group;
+    if (name === "joints") this.applyLit();
     return group;
   }
 
   /** Show or hide a whole layer (bones, muscles, joints). */
   async setLayer(name, on) {
+    this.layerOn[name] = on;
     if (on) await this.addLayer(name);
-    if (this.groups[name]) this.groups[name].visible = on;
+    if (this.groups[name]) this.groups[name].visible = on || (name === "joints" && this.litJoints);
     this.render();
   }
 
@@ -149,12 +166,12 @@ export class Viewer3D {
   applyMuscleStyle() {
     const g = this.groups.muscles;
     if (!g) return;
-    const focusing = this.focusParts.size > 0;
+    const fadeRest = this.ghost || (this.focusParts.size > 0 && this.fade);
     g.traverse((o) => {
       if (!o.isMesh) return;
       const n = partName(o), isFocus = this.focusParts.has(n);
       o.visible = isFocus || this.depth !== "superficial" || this.superficial.has(n);
-      o.material = isFocus ? this.mats.focus : focusing && this.fade ? this.mats.faded : this.mats.muscles;
+      o.material = isFocus ? this.mats.focus : fadeRest ? this.mats.faded : this.mats.muscles;
       o.renderOrder = isFocus ? 1 : 0;
     });
     this.render();
@@ -166,17 +183,95 @@ export class Viewer3D {
     this.applyMuscleStyle();
   }
 
+  /** Draw every muscle faded, so the bones show through them. */
+  setGhost(on) {
+    this.ghost = on;
+    this.applyMuscleStyle();
+  }
+
+  /**
+   * Light bones and ligaments, mark landmark spots on the bone, and frame them.
+   * pieces: model piece names (bones layer or joints layer), named for the client's left.
+   * spots: [{p: [x, y, z, nx, ny, nz], label}] on the client's left.
+   * side "R" moves everything to the client's right; both lights the pieces on both sides.
+   * view ("front" or "back") is where the camera looks from; a single spot is framed close.
+   */
+  async focusAnatomy({ pieces = [], spots = [], side = "L", both = false, view = "front" } = {}) {
+    await this.ready;
+    const right = side === "R";
+    const names = new Set(pieces.map((n) => (right ? toRight(n) : n)));
+    if (both) pieces.forEach((n) => { names.add(n); names.add(toRight(n)); });
+    if ([...names].some((n) => !this.meshesNamed(this.groups.bones, new Set([n])).length)) await this.addLayer("joints");
+    this.lit = names;
+    this.applyLit();
+    this.setSpots(spots.map(({ p, label }) => ({ p: right ? [-p[0], p[1], p[2], -p[3], p[4], p[5]] : p, label })));
+    /* Frame only the chosen side's copies, so both femurs light but the camera stays on one. */
+    const own = new Set(pieces.map((n) => (right ? toRight(n) : n)));
+    const meshes = [this.groups.bones, this.groups.joints].filter(Boolean).flatMap((g) => this.meshesNamed(g, own));
+    if (this.spots.length === 1) this.focusSpot(this.spots[0], view);
+    else if (meshes.length || this.spots.length) this.frame(meshes, view, this.spots.map((s) => s.mesh.position));
+    this.render();
+  }
+
+  /* Lit bones turn orange; lit ligaments show alone in green, with joint capsules see-through. */
+  applyLit() {
+    const lit = this.lit;
+    this.groups.bones.traverse((o) => { if (o.isMesh) o.material = lit.has(partName(o)) ? this.mats.litBone : this.mats.bones; });
+    const j = this.groups.joints;
+    if (!j) return;
+    let any = false;
+    j.traverse((o) => {
+      if (!o.isMesh) return;
+      const n = partName(o), on = lit.has(n);
+      any ||= on;
+      o.material = !on ? this.mats.joints : n.startsWith("Articular capsule") ? this.mats.capsule : this.mats.ligament;
+    });
+    this.litJoints = any;
+    j.traverse((o) => { if (o.isMesh) o.visible = !any || lit.has(partName(o)); });
+    j.visible = this.layerOn.joints || any;
+  }
+
+  /** Replace the landmark dots and their labels. */
+  setSpots(spots) {
+    for (const s of this.spots) this.scene.remove(s.mesh);
+    this.labels.textContent = "";
+    const dot = (this.spotGeo ??= new THREE.SphereGeometry(0.0055, 14, 10));
+    const rim = (this.spotRim ??= new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.BackSide }));
+    this.spots = spots.map(({ p, label }) => {
+      const mesh = new THREE.Mesh(dot, this.mats.spot);
+      const shell = new THREE.Mesh(dot, rim);
+      shell.scale.setScalar(1.4);
+      mesh.add(shell);
+      const normal = new THREE.Vector3(p[3], p[4], p[5]);
+      mesh.position.set(p[0], p[1], p[2]).addScaledVector(normal, 0.002);
+      this.scene.add(mesh);
+      const el = document.createElement("span");
+      el.textContent = label;
+      this.labels.append(el);
+      return { mesh, normal, el };
+    });
+  }
+
+  /* One landmark, close up: the view blends its surface normal with the front or back of the body. */
+  focusSpot(spot, view) {
+    const target = spot.mesh.position.clone();
+    const dir = spot.normal.clone().add(new THREE.Vector3(0, 0, view === "back" ? -1.2 : 1.2));
+    dir.y *= 0.4;
+    this.tween(target, target.clone().add(dir.normalize().multiplyScalar(0.6)));
+  }
+
   meshesNamed(group, names) {
     const out = [];
     group.traverse((o) => { if (o.isMesh && names.has(partName(o))) out.push(o); });
     return out;
   }
 
-  /** Point the camera at a set of meshes, from the given side or the current direction. */
-  frame(meshes, side = null) {
-    if (!meshes.length) return;
+  /** Point the camera at a set of meshes (and extra points), from the given side or the current direction. */
+  frame(meshes, side = null, points = []) {
+    if (!meshes.length && !points.length) return;
     const box = new THREE.Box3();
     meshes.forEach((m) => box.expandByObject(m));
+    points.forEach((p) => box.expandByPoint(p));
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3()).length();
     const dir = side ? new THREE.Vector3(0, 0, side === "back" ? -1 : 1)
@@ -222,8 +317,9 @@ export class Viewer3D {
         const p = ray.intersectObjects([this.groups.points], true).find((x) => x.object.visible);
         if (p) return { point: p.object.userData.point, mesh: p.object };
       }
-      const targets = this.groups.muscles && this.groups.muscles.visible ? [this.groups.muscles] : [];
+      const targets = [this.groups.muscles, this.opts.onBone && this.groups.bones].filter((g) => g && g.visible);
       const h = ray.intersectObjects(targets, true).find((x) => x.object.visible && x.object.material !== this.mats.faded);
+      if (h && h.object.userData.layer === "bones") return { bone: partName(h.object) };
       const id = h && this.partToMuscle[partName(h.object)];
       return id ? { muscle: id } : null;
     };
@@ -236,15 +332,17 @@ export class Viewer3D {
         this.opts.onPoint(h.point);
       }
       else if (h && h.muscle && this.opts.onPick) this.opts.onPick(h.muscle);
+      else if (h && h.bone) this.opts.onBone(h.bone);
     });
     canvas.addEventListener("pointermove", (e) => {
-      if (e.buttons || !this.map) return;
+      if (e.buttons || !this.map || this.opts.quiet) return;
       const h = hit(e);
       const p = h && h.point && Atlas.POINTS[h.point];
       const m = h && h.muscle && Atlas.MUSCLES.find((x) => x.id === h.muscle);
-      const pickable = (p && this.opts.onPoint) || (m && this.opts.onPick);
-      this.hover.textContent = p ? `${p.code || p.id} ${p.en}` : m ? m.n : "";
-      this.hover.hidden = !(p || m);
+      const b = h && h.bone && h.bone.replace(/\.[lr]$/, "");
+      const pickable = (p && this.opts.onPoint) || (m && this.opts.onPick) || b;
+      this.hover.textContent = p ? `${p.code || p.id} ${p.en}` : m ? m.n : b || "";
+      this.hover.hidden = !(p || m || b);
       canvas.style.cursor = pickable ? "pointer" : "grab";
     });
     canvas.addEventListener("pointerleave", () => { this.hover.hidden = true; });
@@ -266,6 +364,22 @@ export class Viewer3D {
       this.groups.points.children.forEach((m) => m.scale.setScalar((m.userData.base || 1) * k));
     }
     this.renderer.render(this.scene, this.camera);
+    this.placeLabels();
+  }
+
+  /*
+   * Landmark labels follow their dots on screen, and hide once the bone surface under the
+   * dot turns well away from the camera; a spot on the side of a bone, seen edge-on, keeps its label.
+   */
+  placeLabels() {
+    if (!this.spots.length) return;
+    const { clientWidth: w, clientHeight: h } = this.host, v = new THREE.Vector3();
+    for (const s of this.spots) {
+      const facing = s.normal.dot(v.copy(this.camera.position).sub(s.mesh.position).normalize()) > -0.3;
+      v.copy(s.mesh.position).project(this.camera);
+      s.el.hidden = !facing || v.z > 1;
+      s.el.style.transform = `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * h}px)`;
+    }
   }
 
   /* ---------- Points and channels (data from docs/js/data/body-3d.js) ---------- */
