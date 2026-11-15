@@ -41,6 +41,15 @@ each one to the kata, the Five Phases, and the course's pain and emotion materia
     practitioner asks
   - muscles mapped to the channels that run over them
   - familiar words that mean something different in TCM
+- **Body Terms.** The anatomical vocabulary from the handbook's worksheets
+  (Handbook 4.5-4.7):
+  - the Western and Traditional Asian Medicine starting positions
+  - direction pairs and body planes drawn on the figures, with the points whose
+    locations use each term
+  - animated movements such as flexion, abduction and rotation, with the muscles that
+    produce them
+  - a searchable glossary of landmarks, bony features and location words
+  - **Hide definitions** turns the page into a self-test
 
 ## Running locally
 
