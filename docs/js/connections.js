@@ -99,6 +99,19 @@ Atlas.views = Atlas.views || {};
   }
 
   /* ---------- The card: what a node is and everything linked to it ---------- */
+  /** The facts its home tab shows for a node, from the same shared renderers. */
+  function factsHTML(n) {
+    const id = n.key.slice(n.key.indexOf(":") + 1);
+    switch (n.type) {
+      case "point": { const p = Atlas.pointParts(Atlas.POINTS[id]); return p.head + p.location + p.course + p.actions; }
+      case "muscle": return Atlas.muscleFacts(Atlas.MUSCLES.find((m) => m.id === id));
+      case "kata": return Atlas.kataFacts(Number(id)) + Atlas.kataReminder;
+      case "phase": return Atlas.phaseFacts(id);
+      case "channel": return `<span class="eyebrow">Channel</span><h3 class="lens-muscle">${esc(n.label)}</h3>
+        <p class="muted" style="margin:0">${Atlas.channelMeta(id)}</p>${Atlas.channelFacts(id)}`;
+      case "emotion": return `<span class="eyebrow">Emotion · ${Atlas.ELEMENTS[id].name}</span><h3 class="lens-muscle">${esc(n.label)}</h3>${Atlas.emotionFacts(id)}`;
+    }
+  }
   function cardHTML(key) {
     const { nodes, adj } = Atlas.graph();
     const c = nodes.get(key), links = adj.get(key);
@@ -112,9 +125,7 @@ Atlas.views = Atlas.views || {};
     }).join("");
     const here = C.mode === "explore";
     return `${Atlas.sheetBar("Close the details")}
-      <span class="eyebrow">${esc(typeTag(c))}</span>
-      <h3 class="lens-muscle">${esc(c.label)}</h3>
-      ${c.sub ? `<p style="margin:0">${esc(c.sub)}</p>` : ""}
+      ${factsHTML(c)}
       <p class="muted" style="margin:0">${links.length} link${links.length === 1 ? "" : "s"}. ${here ? "Click any of them to make it the center." : C.mode === "sky" ? "Pick one to light it up." : "Pick one to see its links."}</p>
       <div class="chips">${here ? "" : `<button class="btn" data-ck="${esc(key)}">Explore from here</button>`}
         <button class="btn${here ? "" : " ghost"}" data-open="${esc(key)}">${OPEN_LABEL[c.go[0]]}</button>

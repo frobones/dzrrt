@@ -18,6 +18,18 @@ Atlas.views = Atlas.views || {};
   }
 
   /* ---------- Kata ---------- */
+  /** A kata step's group, number, title, position, side and note: shared by the Kata and Connections cards. */
+  Atlas.kataFacts = function (i) {
+    const s = Atlas.KATA[i], grp = Atlas.KATA_GROUPS.find((g) => g.id === s.g);
+    const side = { L: "Client's left side", R: "Client's right side", both: "Both sides / midline" }[s.side];
+    return `<div class="eyebrow">${esc(grp.name)}</div>
+        <div style="display:flex;gap:14px;align-items:end"><div class="kata-num">${esc(s.n)}</div><h2 style="font-size:22px">${esc(s.t)}</h2></div>
+        <div class="chips"><span class="chip">${grp.pos === "prone" ? "Prone" : "Supine"}</span><span class="chip">${side}</span><span class="chip mono">Handbook ${esc(s.ref)}</span></div>
+        <p style="margin:0">${esc(s.note)}</p>`;
+  };
+  const KATA_REMINDER = `<p class="muted" style="font-size:12.5px;margin:0">Remember the pre-session interview and contraindications (2.7-2.19). For a pregnant client: no Long Life points, no deep pressure, no prone or supine after 13 weeks (2.33).</p>`;
+  Atlas.kataReminder = KATA_REMINDER;
+
   Atlas.views.kata = function () {
     const root = $("#view-kata");
     const groups = Atlas.KATA_GROUPS.map((g) => `<h4>${esc(g.name)}</h4>` + Atlas.KATA.map((s, i) => s.g === g.id
@@ -67,13 +79,9 @@ Atlas.views = Atlas.views || {};
         const list = $("#kata-list"), lr = list.getBoundingClientRect(), cr = cur.getBoundingClientRect();
         if (cr.top < lr.top || cr.bottom > lr.bottom) list.scrollTop += cr.top - lr.top - list.clientHeight / 2;
       }
-      const side = { L: "Client's left side", R: "Client's right side", both: "Both sides / midline" }[s.side];
       $("#kata-card").innerHTML = `
         <div class="progress"><span style="width:${((i + 1) / Atlas.KATA.length) * 100}%"></span></div>
-        <div class="eyebrow">${esc(grp.name)}</div>
-        <div style="display:flex;gap:14px;align-items:end"><div class="kata-num">${esc(s.n)}</div><h2 style="font-size:22px">${esc(s.t)}</h2></div>
-        <div class="chips"><span class="chip">${grp.pos === "prone" ? "Prone" : "Supine"}</span><span class="chip">${side}</span><span class="chip mono">Handbook ${esc(s.ref)}</span></div>
-        <p style="margin:0">${esc(s.note)}</p>
+        ${Atlas.kataFacts(i)}
         ${s.ch.length ? `<div class="d-section"><h4>Channels under your hands</h4><div class="chips">${s.ch.map((c) => `<span class="chip" style="color:${Atlas.elColor(c)}"><span class="dot"></span>${esc(Atlas.CHANNELS[c].name)}</span>`).join("")}</div></div>` : ""}
         ${s.pts.length ? `<div class="d-section"><h4>Points</h4><div>${s.pts.map((id) => `${Atlas.ptLink(id)} <span class="muted">${esc(Atlas.POINTS[id].en)}</span>`).join("<br>")}</div></div>` : ""}
         <div class="kata-nav">
@@ -81,7 +89,7 @@ Atlas.views = Atlas.views || {};
           <button class="btn" id="k-play">${timer ? "Pause" : "Play"}</button>
           <button class="btn ghost" id="k-next" ${i === Atlas.KATA.length - 1 ? "disabled" : ""}>Next →</button>
         </div>
-        <p class="muted" style="font-size:12.5px;margin:0">Remember the pre-session interview and contraindications (2.7-2.19). For a pregnant client: no Long Life points, no deep pressure, no prone or supine after 13 weeks (2.33).</p>`;
+        ${KATA_REMINDER}`;
       $("#k-prev").onclick = () => go(i - 1);
       $("#k-next").onclick = () => go(i + 1);
       $("#k-play").onclick = () => {
@@ -189,6 +197,29 @@ Atlas.views = Atlas.views || {};
   };
 
   /* ---------- Five Phases ---------- */
+  /** An emotion's effect and the class handout's DZRRT approach to it. */
+  Atlas.emotionFacts = function (k) {
+    const em = Atlas.PHASES.emotions[k];
+    return `<p style="margin:0">${esc(em.effect)}</p>
+          <div class="course-note"><b>DZRRT approach.</b> ${esc(em.tx)} <b>Zone:</b> ${esc(em.zone)}. <b>Points:</b> ${em.pts.map(Atlas.ptLink).join(", ")}<div class="src">Pathogens and Emotions handout; Handbook 3.55</div></div>`;
+  };
+  /** A phase's cycles, organs, source points, emotion and personality type: shared by Five Phases and Connections. */
+  Atlas.phaseFacts = function (k) {
+    const P = Atlas.PHASES, i = P.order.indexOf(k), e = Atlas.ELEMENTS[k], org = P.organs[k];
+    const name = (x) => Atlas.ELEMENTS[x].name;
+    const chs = [org.yin, org.yang, org.yin2, org.yang2].filter(Boolean);
+    const src = Object.values(Atlas.POINTS).filter((p) => chs.includes(p.ch) && p.cats.includes("source"));
+    return `<div class="eyebrow">Phase</div>
+        <div class="big-stat" style="color:var(${e.color})">${e.hz} ${e.name}</div>
+        <ul style="margin:0;padding-left:18px">
+          <li>Nourishes <b>${name(P.order[(i + 1) % 5])}</b>, is nourished by <b>${name(P.order[(i + 4) % 5])}</b></li>
+          <li>Controls <b>${name(P.order[(i + 2) % 5])}</b>, is controlled by <b>${name(P.order[(i + 3) % 5])}</b></li></ul>
+        <div class="d-section"><h4>Organs and channels</h4><div class="chips">${chs.map((c) => `<span class="chip" style="color:var(${e.color})"><span class="dot"></span>${c} ${esc(Atlas.CHANNELS[c].name)} (${Atlas.CHANNELS[c].yy})</span>`).join("")}</div></div>
+        <div class="d-section"><h4>Source points</h4><div>${src.map((p) => `${Atlas.ptLink(p.id)} <span class="muted">${esc(p.en)}</span>`).join(" · ")}</div></div>
+        <div class="d-section"><h4>Emotion: ${esc(P.emotions[k].e)}</h4>${Atlas.emotionFacts(k)}</div>
+        <div class="d-section"><h4>Personality type</h4><p style="margin:0">${esc(P.types[k])}</p><div class="src">Handbook 3.94-3.95</div></div>`;
+  };
+
   Atlas.views.phases = function () {
     const root = $("#view-phases");
     const P = Atlas.PHASES;
@@ -231,23 +262,10 @@ Atlas.views = Atlas.views || {};
     $("#cycle").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setCycle(b.dataset.c); });
 
     function pick(k) {
-      const i = P.order.indexOf(k), e = Atlas.ELEMENTS[k], em = P.emotions[k], org = P.organs[k];
-      const name = (x) => Atlas.ELEMENTS[x].name;
+      const i = P.order.indexOf(k);
       root.querySelectorAll("#phase-svg .arrow").forEach((a) => a.style.opacity = a.dataset.from === k || a.dataset.to === k ? 1 : 0.18);
       root.querySelectorAll("#phase-svg .phase-node").forEach((g) => g.style.opacity = g.dataset.el === k ? 1 : 0.75);
-      const chs = [org.yin, org.yang, org.yin2, org.yang2].filter(Boolean);
-      const src = Object.values(Atlas.POINTS).filter((p) => chs.includes(p.ch) && p.cats.includes("source"));
-      $("#phase-card").innerHTML = `
-        <div class="eyebrow">Phase</div>
-        <div class="big-stat" style="color:var(${e.color})">${e.hz} ${e.name}</div>
-        <ul style="margin:0;padding-left:18px">
-          <li>Nourishes <b>${name(P.order[(i + 1) % 5])}</b>, is nourished by <b>${name(P.order[(i + 4) % 5])}</b></li>
-          <li>Controls <b>${name(P.order[(i + 2) % 5])}</b>, is controlled by <b>${name(P.order[(i + 3) % 5])}</b></li></ul>
-        <div class="d-section"><h4>Organs and channels</h4><div class="chips">${chs.map((c) => `<span class="chip" style="color:var(${e.color})"><span class="dot"></span>${c} ${esc(Atlas.CHANNELS[c].name)} (${Atlas.CHANNELS[c].yy})</span>`).join("")}</div></div>
-        <div class="d-section"><h4>Source points</h4><div>${src.map((p) => `${Atlas.ptLink(p.id)} <span class="muted">${esc(p.en)}</span>`).join(" · ")}</div></div>
-        <div class="d-section"><h4>Emotion: ${esc(em.e)}</h4><p style="margin:0">${esc(em.effect)}</p>
-          <div class="course-note"><b>DZRRT approach.</b> ${esc(em.tx)} <b>Zone:</b> ${esc(em.zone)}. <b>Points:</b> ${em.pts.map(Atlas.ptLink).join(", ")}<div class="src">Pathogens and Emotions handout; Handbook 3.55</div></div></div>
-        <div class="d-section"><h4>Personality type</h4><p style="margin:0">${esc(P.types[k])}</p><div class="src">Handbook 3.94-3.95</div></div>`;
+      $("#phase-card").innerHTML = Atlas.phaseFacts(k);
       const t = $("#phase-table");
       t.querySelectorAll("td").forEach((td) => td.classList.toggle("on", Number(td.dataset.i) === i));
     }

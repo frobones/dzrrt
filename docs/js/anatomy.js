@@ -317,20 +317,25 @@ Atlas.views = Atlas.views || {};
     return { pts, chs };
   }
 
-  function showMuscle(m, figs) {
-    const v = viewer;
-    if (S.dim === "3d" && v) v.loaded.then((ok) => ok && v.focusMuscle(m.id, { side: m.v }));
-    const { pts, chs } = drawFigures(m, figs);
-    const kata = kataFor(pts), moves = movesFor(m);
+  /** A muscle's facts from the book, shared by the Anatomy card and the Connections card. */
+  Atlas.muscleFacts = function (m) {
     const row = (k, v) => v ? `<div class="oia"><span class="eyebrow">${k}</span><p>${esc(v)}</p></div>` : "";
-    $("#mus-card").innerHTML = `
-      <div class="card-top"><span class="eyebrow">${esc(m.group || m.region)}</span>${examTag(m)}</div>
+    return `<div class="card-top"><span class="eyebrow">${esc(m.group || m.region)}</span>${examTag(m)}</div>
       <h3 class="lens-muscle">${esc(m.n)}</h3>
       <div class="src">Netter plate ${esc(m.plate)}</div>
       ${row("Origin", m.o)}${row("Insertion", m.i)}${row("Action", m.a)}${row("Nerve", m.nerve)}
       ${!m.o && !m.i ? `<p class="muted" style="margin:0">The book names this muscle without giving its attachments.</p>` : ""}
       ${m.note ? `<div class="note-box">${esc(m.note)}</div>` : ""}
-      ${fromPlates([m.plate, ...(RELATED_PLATES[m.id] || [])])}
+      ${fromPlates([m.plate, ...(RELATED_PLATES[m.id] || [])])}`;
+  };
+
+  function showMuscle(m, figs) {
+    const v = viewer;
+    if (S.dim === "3d" && v) v.loaded.then((ok) => ok && v.focusMuscle(m.id, { side: m.v }));
+    const { pts, chs } = drawFigures(m, figs);
+    const kata = kataFor(pts), moves = movesFor(m);
+    $("#mus-card").innerHTML = `
+      ${Atlas.muscleFacts(m)}
       ${S.dim === "3d" ? pull3d(m)
         : m.v ? `<p class="muted pull-why">A muscle pulls its insertion (I) toward its origin (O). The band on the ${m.v} figure shows that line of pull.</p>`
         : `<p class="muted pull-why">Not drawn on the figure: it is internal or too small to place.</p>`}

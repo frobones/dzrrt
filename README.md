@@ -102,8 +102,11 @@ and one choice applies across the site.
     between them, such as LI4 to its channel, to Metal, to Grief.
   - Constellation: every linked thing at once, each pulled toward its Five Phase, with
     the phases in Sheng order. Pick a dot to light up what it touches.
-  - Picking a route step or a constellation dot shows its card, with all its links,
-    beside the figure; on a phone the card slides up from the bottom.
+  - Every card shows the same facts as the item's own tab, such as a muscle's
+    attachments, action and nerve or a point's location and course notes, with a
+    button to open it there and all its links below.
+  - Picking a route step or a constellation dot shows its card beside the figure; on a
+    phone the card slides up from the bottom.
 
 ## Running locally
 

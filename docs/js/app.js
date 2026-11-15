@@ -348,40 +348,33 @@ window.Atlas = window.Atlas || {};
     }
     const p = Atlas.POINTS[id];
     const ch = p.ch ? Atlas.CHANNELS[p.ch] : null;
-    const el = ch && ch.el ? Atlas.ELEMENTS[ch.el] : null;
     const depth = Atlas.ZONES[p.z].depth;
-    const cats = p.cats.map((c) => `<span class="chip" title="${esc(Atlas.CATEGORIES[c].tip)}">${esc(Atlas.CATEGORIES[c].label)}</span>`).join("");
+    const part = Atlas.pointParts(p);
     const steps = kataSteps(id);
     const muscles = Atlas.musclesUnder ? Atlas.musclesUnder(id).sort((a, b) => !!b.exam - !!a.exam) : [];
     box.innerHTML = `
       ${Atlas.sheetBar("Close the point details")}
-      <div class="d-head">
-        <div class="d-hz" style="color:${Atlas.pointColor(p)}">${esc(p.hz)}</div>
-        <div class="d-code">${esc(code(id))}</div>
-        <div class="d-names"><b>${esc(p.py)}</b> · ${esc(p.en)}${p.alt ? ` <span class="muted">(${esc(p.alt)})</span>` : ""}</div>
-      </div>
-      <div class="chips">${cats}</div>
+      ${part.head}
       <div class="d-section">
         <h4>Channel</h4>
         <div>${ch ? `<button class="chip" id="solo" style="color:${Atlas.elColor(p.ch)}"><span class="dot"></span>${esc(ch.name)} ${esc(ch.hz)}</button>
-          <span class="muted"> ${esc(ch.limb)} ${esc(ch.div)}${el ? ` · ${el.name} ${el.hz}` : ""}${ch.time ? ` · ${fmtTime(ch.time)}` : ""}</span>` : `<span class="muted">Extra point, not on one of the 14 channels.</span>`}</div>
+          <span class="muted"> ${Atlas.channelMeta(p.ch)}</span>` : `<span class="muted">Extra point, not on one of the 14 channels.</span>`}</div>
       </div>
-      <div class="d-section"><h4>Location</h4><p style="margin:0">${esc(p.loc)}</p><p class="muted" style="margin:0"><b>Finding it:</b> ${esc(p.find)}</p></div>
+      ${part.location}
       <div class="d-section"><h4>Depth on the channel</h4>
         <div class="depth-meter" title="Shallow at the hands and feet, deep at the trunk">${[1, 2, 3, 4, 5].map((i) => `<span class="${depth >= i - 0.3 ? "on" : ""}"></span>`).join("")}</div>
         <span class="muted" style="font-size:12.5px">${esc(Atlas.ZONES[p.z].name)}: ${depth < 2 ? "in the shallows, where a ripple travels easily along the channel" : depth < 3.5 ? "where the channel starts to dive" : "in the depths, where it reaches toward the organs"} (Meridian Theory part 1).</span>
       </div>
-      ${p.course && p.course.length ? `<div class="d-section"><h4>In the course</h4>${p.course.map((c) => `<div class="course-note">${esc(c.t)}<div class="src">${esc(c.ref)}</div></div>`).join("")}</div>` : ""}
+      ${part.course}
       ${steps.length ? `<div class="d-section"><h4>Kata steps</h4><div class="chips">${steps.map((s) => `<button class="chip" data-kata="${Atlas.KATA.indexOf(s)}">Step ${esc(s.n)} · ${esc(s.t)}</button>`).join("")}</div></div>` : ""}
       ${muscles.length ? `<div class="d-section"><h4>Muscles under it <span class="tag-outside">approximate</span></h4><div class="chips">${muscles.map((m) => `<button class="chip" data-muscle="${m.id}">${esc(m.n)}</button>`).join("")}</div></div>` : ""}
-      <div class="d-section"><h4>Traditional actions <span class="tag-outside">general TCM</span></h4><ul>${p.fx.map((f) => `<li>${esc(f)}</li>`).join("")}</ul></div>
-      ${p.caut ? `<div class="caution"><b>Caution.</b> ${esc(p.caut)}</div>` : ""}
+      ${part.actions}
       ${p.combos && p.combos.length ? `<div class="d-section"><h4>Works with</h4>${p.combos.map((c) => `<div class="combo"><div>${ptLink(c.w)} <b>${esc(c.n)}</b></div><div class="muted" style="font-size:13.5px">${esc(c.t)}</div></div>`).join("")}</div>` : ""}
       <div class="d-section"><h4>Connection web</h4>${webSVG(p)}
         <div class="legend">${WEB_KINDS.map(([k, t]) => `<span><svg class="web-key" viewBox="0 0 24 8" aria-hidden="true"><path class="edge edge-${k}" d="M1,4 H23"/>${k === "pair" ? '<path class="edge edge-pair-gap" d="M1,4 H23"/>' : ""}</svg>${t}</span>`).join("")}</div>
         <div class="legend web-phases"><span>Dot color = Five Phase:</span>${Object.values(Atlas.ELEMENTS).map((e) => `<span><b class="web-dot" style="color:var(${e.color})"></b>${e.name}</span>`).join("")}<span><b class="web-dot" style="color:var(--extra)"></b>Du / Ren</span><span><b class="web-dot hollow"></b>No phase (kata step)</span></div>
         <button class="chip" id="cx-open" style="margin-top:8px">Explore its connections →</button></div>
-      ${ch ? `<div class="d-section"><h4>${esc(ch.name)} channel</h4><p style="margin:0">${esc(ch.organ)}</p><p class="muted" style="margin:0">${esc(ch.surface)}.${ch.sinewStart ? ` Sinew channel: ${esc(ch.sinewStart)} to ${esc(ch.sinewEnd)}.` : ""}</p><div class="src">${esc(ch.ref)}</div></div>` : ""}`;
+      ${ch ? `<div class="d-section"><h4>${esc(ch.name)} channel</h4>${Atlas.channelFacts(p.ch)}</div>` : ""}`;
     const solo = $("#solo", box);
     if (solo) solo.addEventListener("click", () => { A.chans = new Set([p.ch]); refresh(); });
     $("#cx-open", box).addEventListener("click", () => Atlas.go("connections", "p:" + p.id));
@@ -394,6 +387,33 @@ window.Atlas = window.Atlas || {};
     }));
     box.scrollTop = 0;
   }
+
+  /** A point's facts in pieces, shared by the Atlas panel and the Connections card. */
+  Atlas.pointParts = function (p) {
+    const cats = p.cats.map((c) => `<span class="chip" title="${esc(Atlas.CATEGORIES[c].tip)}">${esc(Atlas.CATEGORIES[c].label)}</span>`).join("");
+    return {
+      head: `<div class="d-head">
+        <div class="d-hz" style="color:${Atlas.pointColor(p)}">${esc(p.hz)}</div>
+        <div class="d-code">${esc(code(p.id))}</div>
+        <div class="d-names"><b>${esc(p.py)}</b> · ${esc(p.en)}${p.alt ? ` <span class="muted">(${esc(p.alt)})</span>` : ""}</div>
+      </div>
+      <div class="chips">${cats}</div>`,
+      location: `<div class="d-section"><h4>Location</h4><p style="margin:0">${esc(p.loc)}</p><p class="muted" style="margin:0"><b>Finding it:</b> ${esc(p.find)}</p></div>`,
+      course: p.course && p.course.length ? `<div class="d-section"><h4>In the course</h4>${p.course.map((c) => `<div class="course-note">${esc(c.t)}<div class="src">${esc(c.ref)}</div></div>`).join("")}</div>` : "",
+      actions: `<div class="d-section"><h4>Traditional actions <span class="tag-outside">general TCM</span></h4><ul>${p.fx.map((f) => `<li>${esc(f)}</li>`).join("")}</ul></div>
+      ${p.caut ? `<div class="caution"><b>Caution.</b> ${esc(p.caut)}</div>` : ""}`,
+    };
+  };
+  /** A channel's limb, Yin/Yang division, phase and horary time on one line. */
+  Atlas.channelMeta = function (c) {
+    const ch = Atlas.CHANNELS[c], el = ch.el ? Atlas.ELEMENTS[ch.el] : null;
+    return `${esc(ch.limb)} ${esc(ch.div)}${el ? ` · ${el.name} ${el.hz}` : ""}${ch.time ? ` · ${fmtTime(ch.time)}` : ""}`;
+  };
+  /** A channel's organ, surface path and sinew channel, with its reference. */
+  Atlas.channelFacts = function (c) {
+    const ch = Atlas.CHANNELS[c];
+    return `<p style="margin:0">${esc(ch.organ)}</p><p class="muted" style="margin:0">${esc(ch.surface)}.${ch.sinewStart ? ` Sinew channel: ${esc(ch.sinewStart)} to ${esc(ch.sinewEnd)}.` : ""}</p><div class="src">${esc(ch.ref)}</div>`;
+  };
 
   function fmtTime([a, b]) {
     const f = (h) => `${((h + 11) % 12) + 1}${h < 12 || h === 24 ? "am" : "pm"}`;
