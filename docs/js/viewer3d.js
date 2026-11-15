@@ -220,7 +220,7 @@ export class Viewer3D {
       /* Points sit on the surface, so test them first; then the muscles under them. */
       if (this.groups.points && this.groups.points.visible) {
         const p = ray.intersectObjects([this.groups.points], true).find((x) => x.object.visible);
-        if (p) return { point: p.object.userData.point };
+        if (p) return { point: p.object.userData.point, mesh: p.object };
       }
       const targets = this.groups.muscles && this.groups.muscles.visible ? [this.groups.muscles] : [];
       const h = ray.intersectObjects(targets, true).find((x) => x.object.visible && x.object.material !== this.mats.faded);
@@ -231,7 +231,10 @@ export class Viewer3D {
     canvas.addEventListener("pointerup", (e) => {
       if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
       const h = hit(e);
-      if (h && h.point && this.opts.onPoint) this.opts.onPoint(h.point);
+      if (h && h.point && this.opts.onPoint) {
+        this.picked = h.mesh; // focusPoint frames this copy of a bilateral point
+        this.opts.onPoint(h.point);
+      }
       else if (h && h.muscle && this.opts.onPick) this.opts.onPick(h.muscle);
     });
     canvas.addEventListener("pointermove", (e) => {
@@ -369,14 +372,15 @@ export class Viewer3D {
   }
 
   /**
-   * Turn the camera toward a point (the client's left copy when there are two). The
-   * view direction blends the surface normal with the figure the point is drawn on,
-   * so a point on the side of the hand is seen from slightly behind, not edge-on.
+   * Turn the camera toward a point: the copy just clicked on the model, otherwise the
+   * client's left copy when there are two. The view direction blends the surface
+   * normal with the figure the point is drawn on, so a point on the side of the hand
+   * is seen from slightly behind, not edge-on.
    */
   focusPoint(id, dist = 0.85) {
     const ms = this.pointMeshes && this.pointMeshes[id];
     if (!ms || !ms.length) return;
-    const m = ms.find((x) => x.position.x >= 0) || ms[0];
+    const m = ms.includes(this.picked) ? this.picked : ms.find((x) => x.position.x >= 0) || ms[0];
     const target = m.position.clone();
     const axis = new THREE.Vector3(0, 0, Atlas.POINTS[id].v === "back" ? -1 : 1);
     const dir = m.userData.normal.clone().add(axis.multiplyScalar(1.2));
