@@ -27,6 +27,19 @@ The repository has two parts:
 
 The last slide of the Meridian Theory PDF duplicates slide 1 of the pptx.
 
+### Class notes
+
+The user's own class notes for the whole course live in a Google Doc, outside the
+repository:
+<https://docs.google.com/document/d/1SzE8p9yyB3TD_9jtz062XGyj4WhP6vXHhOm2V-oUgHA/edit?usp=sharing>
+
+- Check them for class techniques, terms and abbreviations that the handbook and
+  handouts don't use.
+- Read them as plain text by fetching the document's `/export?format=txt` URL. The
+  response redirects to a `googleusercontent.com` export host.
+- They are informal and may abbreviate or paraphrase what was said in class. Treat
+  them as a record of what was taught, not as an authority that overrides the handbook.
+
 ## Handbook map
 
 Each footer carries a **handbook page label** such as `3.30` (section.page).
@@ -151,12 +164,14 @@ this kata step affect" questions.
 - **Program naming.** "Chuden Ichi" is the current name. "Chuden I" and "Module 2" are
   former names, and "Chuden Ni" is the next level.
 - **Source tiers.** Answer from the handbook first. Then use the 2026 class handouts,
-  which are instructor elaborations and generally agree with the handbook. Use general
-  TCM knowledge last, and **label it as outside the course material**. Exam answers
+  which are instructor elaborations and generally agree with the handbook. Then use the
+  user's [class notes](#class-notes). Use general TCM knowledge last, and **label it as
+  outside the course material**. Exam answers
   should match the handbook's wording and lists, even where standard TCM texts differ.
 - **The anatomy text.** *Netter's Anatomy Coloring Book* is the course's assigned anatomy book, so it sits
   with the handbook as a course source. Cite it by plate, for example "Netter plate 3-9".
-- **Citing.** Cite every substantive claim with a handbook label or a handout filename.
+- **Citing.** Cite every substantive claim with a handbook label, a handout filename,
+  or "class notes" with the notes' heading.
   If the corpus doesn't cover something, say so rather than filling the gap.
 - **Pain material spans three sources, and they complement each other:**
   - Handbook 3.48–3.49: the Eight Principles pain table
