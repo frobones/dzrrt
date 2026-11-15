@@ -56,7 +56,7 @@ window.Atlas = window.Atlas || {};
   }
 
   /* ---------- Routing ---------- */
-  const VIEWS = ["atlas", "kata", "clock", "phases", "depth", "study", "lenses", "terms", "anatomy"];
+  const VIEWS = ["atlas", "kata", "clock", "phases", "depth", "study", "lenses", "terms", "anatomy", "connections"];
   const inited = {};
   function show(view, arg) {
     if (!VIEWS.includes(view)) view = "atlas";
@@ -81,15 +81,18 @@ window.Atlas = window.Atlas || {};
     }
     if (view === "kata" && arg !== undefined && Atlas.kataGo) Atlas.kataGo(arg);
     if (view === "anatomy" && arg && Atlas.anatomyGo) Atlas.anatomyGo(arg);
+    if (view === "connections" && arg) Atlas.connectionsGo(arg);
   }
   /*
    * Deep links: #p-<point>, #ch-<channel>, #kata-<step>, #m-<muscle>, #bone-<name>, #lm-<landmark>,
-   * #joint-<name>. The Atlas takes a point id or {ch}; Anatomy a muscle id, {bone}, {lm} or {joint}.
+   * #joint-<name>, #c-<node>. The Atlas takes a point id or {ch}; Anatomy a muscle id, {bone}, {lm} or
+   * {joint}; Connections a graph node key such as "p:LI4".
    */
   function hashFor(view, arg) {
     if (arg === undefined || arg === null || arg === "") return view;
     if (view === "atlas") return arg.ch ? "ch-" + arg.ch : "p-" + arg;
     if (view === "kata") return "kata-" + arg;
+    if (view === "connections") return "c-" + encodeURIComponent(arg);
     if (view === "anatomy") {
       if (arg.bone) return "bone-" + encodeURIComponent(arg.bone);
       if (arg.lm) return "lm-" + arg.lm;
@@ -99,7 +102,7 @@ window.Atlas = window.Atlas || {};
     return view;
   }
   /* On a phone the header and controls fill the first screen, so opening one thing scrolls to its figure. */
-  const FIGURE_OF = { atlas: "#view-atlas .stage", kata: "#view-kata .kata-figure", anatomy: "#anat-body .anat-figcol" };
+  const FIGURE_OF = { atlas: "#view-atlas .stage", kata: "#view-kata .kata-figure", anatomy: "#anat-body .anat-figcol", connections: "#cx-body" };
   Atlas.go = function (view, arg) {
     const hash = hashFor(view, arg);
     if (location.hash !== "#" + hash) history.replaceState(null, "", "#" + hash);
@@ -119,6 +122,7 @@ window.Atlas = window.Atlas || {};
     if (h.startsWith("bone-")) return show("anatomy", { bone: decodeURIComponent(h.slice(5)) });
     if (h.startsWith("lm-")) return show("anatomy", { lm: h.slice(3) });
     if (h.startsWith("joint-")) return show("anatomy", { joint: decodeURIComponent(h.slice(6)) });
+    if (h.startsWith("c-")) return show("connections", decodeURIComponent(h.slice(2)));
     show(h || "atlas");
   }
 
@@ -182,7 +186,7 @@ window.Atlas = window.Atlas || {};
           <div class="body3d" id="atlas-3d" hidden></div>
           <p class="muted" style="font-size:12.5px;margin:0" id="atlas-help"></p>
         </section>
-        <aside class="detail panel" id="detail" aria-live="polite"></aside>
+        <aside class="detail panel sheet" id="detail" aria-live="polite"></aside>
       </div>`;
 
     const onPoint = (id) => selectPoint(id, true);
@@ -241,7 +245,7 @@ window.Atlas = window.Atlas || {};
       A.figs.forEach((f) => f.zoomTo(Atlas.REGIONS[b.dataset.region]));
     });
     setDim(A.dim);
-    bindSheet();
+    Atlas.bindSheet($("#detail"));
     if (!A.sel) renderDetail(null);
   }
 
@@ -284,15 +288,22 @@ window.Atlas = window.Atlas || {};
     if (push) history.replaceState(null, "", "#p-" + id);
     renderDetail(id);
     /* On a phone the details would sit two screens below the figures, so they slide up over them. */
-    if ((push || zoom) && window.matchMedia("(max-width: 800px)").matches) $("#detail").classList.add("sheet-open");
+    if (push || zoom) Atlas.openSheet($("#detail"));
   }
 
-  /* The phone sheet closes with its X, Escape, or a downward swipe on its bar; the point stays selected. */
-  function bindSheet() {
-    const box = $("#detail");
-    const close = () => { box.classList.remove("sheet-open"); box.style.transform = ""; };
+  /*
+   * Phone bottom sheet: a ".sheet" panel sits in the page on wider screens and slides up over
+   * it on a phone once opened. It closes with its X, Escape, or a downward swipe on its bar;
+   * whatever it shows stays selected. The panel's content starts with Atlas.sheetBar().
+   */
+  const closeSheet = (box) => { box.classList.remove("sheet-open"); box.style.transform = ""; };
+  Atlas.sheetBar = (label) => `<div class="sheet-bar"><span class="sheet-grip" aria-hidden="true"></span>
+        <button class="sheet-close" type="button" aria-label="${label}">×</button></div>`;
+  Atlas.openSheet = (box) => { if (window.matchMedia("(max-width: 800px)").matches) box.classList.add("sheet-open"); };
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelectorAll(".sheet.sheet-open").forEach(closeSheet); });
+  Atlas.bindSheet = function (box) {
+    const close = () => closeSheet(box);
     box.addEventListener("click", (e) => { if (e.target.closest(".sheet-close")) close(); });
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && box.classList.contains("sheet-open")) close(); });
     let y0 = null;
     box.addEventListener("touchstart", (e) => { if (e.target.closest(".sheet-bar")) y0 = e.touches[0].clientY; }, { passive: true });
     box.addEventListener("touchmove", (e) => {
@@ -343,8 +354,7 @@ window.Atlas = window.Atlas || {};
     const steps = kataSteps(id);
     const muscles = Atlas.musclesUnder ? Atlas.musclesUnder(id).sort((a, b) => !!b.exam - !!a.exam) : [];
     box.innerHTML = `
-      <div class="sheet-bar"><span class="sheet-grip" aria-hidden="true"></span>
-        <button class="sheet-close" type="button" aria-label="Close the point details">×</button></div>
+      ${Atlas.sheetBar("Close the point details")}
       <div class="d-head">
         <div class="d-hz" style="color:${Atlas.pointColor(p)}">${esc(p.hz)}</div>
         <div class="d-code">${esc(code(id))}</div>
@@ -369,10 +379,12 @@ window.Atlas = window.Atlas || {};
       ${p.combos && p.combos.length ? `<div class="d-section"><h4>Works with</h4>${p.combos.map((c) => `<div class="combo"><div>${ptLink(c.w)} <b>${esc(c.n)}</b></div><div class="muted" style="font-size:13.5px">${esc(c.t)}</div></div>`).join("")}</div>` : ""}
       <div class="d-section"><h4>Connection web</h4>${webSVG(p)}
         <div class="legend">${WEB_KINDS.map(([k, t]) => `<span><svg class="web-key" viewBox="0 0 24 8" aria-hidden="true"><path class="edge edge-${k}" d="M1,4 H23"/>${k === "pair" ? '<path class="edge edge-pair-gap" d="M1,4 H23"/>' : ""}</svg>${t}</span>`).join("")}</div>
-        <div class="legend web-phases"><span>Dot color = Five Phase:</span>${Object.values(Atlas.ELEMENTS).map((e) => `<span><b class="web-dot" style="color:var(${e.color})"></b>${e.name}</span>`).join("")}<span><b class="web-dot" style="color:var(--extra)"></b>Du / Ren</span><span><b class="web-dot hollow"></b>No phase (kata step)</span></div></div>
+        <div class="legend web-phases"><span>Dot color = Five Phase:</span>${Object.values(Atlas.ELEMENTS).map((e) => `<span><b class="web-dot" style="color:var(${e.color})"></b>${e.name}</span>`).join("")}<span><b class="web-dot" style="color:var(--extra)"></b>Du / Ren</span><span><b class="web-dot hollow"></b>No phase (kata step)</span></div>
+        <button class="chip" id="cx-open" style="margin-top:8px">Explore its connections →</button></div>
       ${ch ? `<div class="d-section"><h4>${esc(ch.name)} channel</h4><p style="margin:0">${esc(ch.organ)}</p><p class="muted" style="margin:0">${esc(ch.surface)}.${ch.sinewStart ? ` Sinew channel: ${esc(ch.sinewStart)} to ${esc(ch.sinewEnd)}.` : ""}</p><div class="src">${esc(ch.ref)}</div></div>` : ""}`;
     const solo = $("#solo", box);
     if (solo) solo.addEventListener("click", () => { A.chans = new Set([p.ch]); refresh(); });
+    $("#cx-open", box).addEventListener("click", () => Atlas.go("connections", "p:" + p.id));
     box.querySelectorAll(".web .node").forEach((n) => n.addEventListener("click", () => {
       const t = n.dataset;
       if (t.wpt) selectPoint(t.wpt, true);

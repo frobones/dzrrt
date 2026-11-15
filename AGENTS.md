@@ -373,6 +373,9 @@ Then open `http://localhost:8765`. `.claude/launch.json` defines the same server
 | `docs/js/search.js` | The header search: builds an index of points, channels, kata steps, muscles, bones, landmarks and joints, and opens a result through `Atlas.go` |
 | `docs/vendor/fuse-7.5.0/` | Fuse.js 7.5.0 (Apache-2.0), the basic build, for typo-tolerant name matching in search |
 | `docs/js/terms.js` | The Body Terms view and its movement diagrams |
+| `docs/js/graph.js` | The connection graph built from the data files: node and link kinds, shortest routes |
+| `docs/js/connections.js` | The Connections view: Explore, "How are these connected?" and the Constellation |
+| `docs/vendor/d3-force-3.0.0/` | d3-force 3.0.0 and the d3-dispatch, d3-quadtree and d3-timer builds it needs (ISC), loaded when the Constellation opens |
 
 Scripts are classic (not ES modules) and share one global, `window.Atlas`. Load order
 in `index.html` matters: data first, then `body.js`, then the views.
@@ -381,19 +384,24 @@ The one exception is the 3D viewer, `viewer3d.js`, an ES module that `anatomy.js
 with `import()` the first time the 3D view opens. The import map in `index.html` points
 `three` at the vendored copy. **3D rendering uses three.js only**; upgrade it by
 replacing the versioned `docs/vendor/three-<version>/` folder and the import map.
+**Graph layout uses d3-force only**; the Constellation loads it on first open.
 `search.js` likewise imports Fuse.js on first use; **fuzzy matching uses Fuse.js only**.
 
 Deep links open one thing in its tab: `#p-<point>`, `#ch-<channel>`, `#kata-<step>`,
-`#m-<muscle>`, `#bone-<name>`, `#lm-<landmark>` and `#joint-<name>` (names URL-encoded).
+`#m-<muscle>`, `#bone-<name>`, `#lm-<landmark>`, `#joint-<name>` and `#c-<node>`, a
+Connections node key such as `p:LI4` (names URL-encoded).
 `Atlas.go(view, arg)` builds them; search uses the same calls.
 
-The Atlas, Study and Anatomy pages carry an Exam | Everything switch
+The Atlas, Study, Anatomy and Connections pages carry an Exam | Everything switch
 (`Atlas.scopeSwitch()`); the choice is site-wide (`Atlas.examOnly()`, event
 `scopechange`) and defaults to Exam. A page that adds exam-scoped content should use it.
 
 On touch screens (`Atlas.coarse`), one finger scrolls the page and two fingers move the
 figures: `Atlas.twoFingerGestures` sets this up for the 2D figures and the 3D viewer, and
-any new figure should use it.
+any new figure should use it. A details panel that sits beside a figure becomes a sheet
+that slides up from the bottom on a phone: give it the `sheet` class, start its content
+with `Atlas.sheetBar()`, and use `Atlas.bindSheet()` and `Atlas.openSheet()`, as the
+Atlas point panel and the Connections card do.
 
 The Atlas, Kata and Anatomy views offer a 3D/2D toggle, and each tab remembers its own
 choice (`Atlas.dim(tab)`). Atlas and Kata start in 2D, Anatomy in 3D. Other figures

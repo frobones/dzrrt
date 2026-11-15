@@ -17,10 +17,10 @@ tab's 2D or 3D figure.
 and two fingers move, zoom and turn the figures; on the 3D body, double-tap a spot to
 center on it. A point's details slide up from the bottom of the screen.
 
-An **Exam | Everything** switch on the Atlas, Study and Anatomy pages narrows each one
-to what the written exams cover: the points the course names, and the muscles and
-bones in the anatomy study guide (Handbook 4.54). It starts on Exam, and one
-choice applies across the site.
+An **Exam | Everything** switch on the Atlas, Study, Anatomy and Connections pages
+narrows each one to what the written exams cover: the points the course names, and
+the muscles and bones in the anatomy study guide (Handbook 4.54). It starts on Exam,
+and one choice applies across the site.
 
 - **Atlas.** Flat front and back figures with every course point plus the classical
   points that link the channels. A 3D toggle shows a body you can turn, with the
@@ -92,6 +92,18 @@ choice applies across the site.
     3D body. When you name a muscle, the body stays blank until you ask for a hint or
     answer, then shows the muscle with its origin and insertion
   - the Atlas point panel lists the muscles under each point
+- **Connections.** Everything the site links together, as one web: points, channels,
+  the Five Phases, emotions, kata steps and the muscles under the points. Line style
+  shows the kind of link and dot color the Five Phase.
+  - Explore: type a name in **Start from** to put anything at the center with
+    everything linked to it, then click a neighbor to walk to it. A trail takes you
+    back. Each Atlas point panel opens here too.
+  - How are these connected?: pick any two things to see the shortest chains of links
+    between them, such as LI4 to its channel, to Metal, to Grief.
+  - Constellation: every linked thing at once, each pulled toward its Five Phase, with
+    the phases in Sheng order. Pick a dot to light up what it touches.
+  - Picking a route step or a constellation dot shows its card, with all its links,
+    beside the figure; on a phone the card slides up from the bottom.
 
 ## Running locally
 
@@ -121,9 +133,10 @@ Neither one's text nor its images are reproduced here.
 
 ## Third-party assets
 
-The 3D view uses three.js 0.186.1 (MIT) and Google's Draco decoder (Apache-2.0), and
-search uses Fuse.js 7.5.0 (Apache-2.0), all copied into `docs/vendor/` with their
-licenses.
+The 3D view uses three.js 0.186.1 (MIT) and Google's Draco decoder (Apache-2.0),
+search uses Fuse.js 7.5.0 (Apache-2.0), and the Connections constellation uses
+d3-force 3.0.0 with d3-dispatch, d3-quadtree and d3-timer (all ISC), all copied into
+`docs/vendor/` with their licenses.
 
 The site loads these fonts from Google Fonts:
 
