@@ -70,6 +70,10 @@ Atlas.views = Atlas.views || {};
   function dropViewer() {
     if (viewer) { viewer.dispose(); viewer = Atlas.viewer3d = null; }
   }
+  /* Runs fn once v has loaded, unless a panel change dropped v (and its panel) while the model loaded. */
+  function whenLoaded(v, fn) {
+    if (v) v.loaded.then((ok) => { if (ok && v === viewer) fn(v); });
+  }
 
   const CREDIT = `3D model: <a href="https://github.com/Z-Anatomy/Models-of-human-anatomy">Z-Anatomy</a> (<a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>), built on <a href="https://dbarchive.biosciencedbc.jp/en/bodyparts3d/">BodyParts3D</a>, © The Database Center for Life Science (CC BY 4.0). Simplified for the web; see <a href="models/README.md">models/README.md</a>.`;
   const TURN = `<div class="seg" role="group" aria-label="Turn the body"><button data-side="front">Front</button><button data-side="back">Back</button></div>`;
@@ -231,7 +235,7 @@ Atlas.views = Atlas.views || {};
     const figs = figures($("#mus-figs"));
     const onPick = (id) => (list.some((m) => m.id === id) ? pick(id) : Atlas.anatomyGo(id));
     const start3d = () => makeViewer($("#mus-3d"), { onPick })
-      .then((v) => v && v.loaded.then((ok) => { if (ok) { v.setFade(true); showMuscle(byId[S.muscle], figs); } }));
+      .then((v) => whenLoaded(v, () => { v.setFade(true); showMuscle(byId[S.muscle], figs); }));
     bindFigures("mus", start3d, () => showMuscle(byId[S.muscle], figs));
     const renderList = (q = "") => {
       const ql = q.trim().toLowerCase();
@@ -394,7 +398,7 @@ Atlas.views = Atlas.views || {};
       v.loaded.then((ok) => { if (!ok) return; v.focusAnatomy(spec); if (sel.kind === "palp") v.view("front"); });
     }
     const start3d = () => makeViewer($("#bone-3d"), { onBone: pickPiece })
-      .then((v) => v && v.loaded.then((ok) => { if (ok) { v.setGhost(true); v.setLayer("muscles", false); draw(); } }));
+      .then((v) => whenLoaded(v, () => { v.setGhost(true); v.setLayer("muscles", false); draw(); }));
     bindFigures("bone", start3d, draw);
     $("#bone-marks").addEventListener("change", (e) => {
       marks = e.target.checked;
@@ -498,7 +502,7 @@ Atlas.views = Atlas.views || {};
     Q.figs = figures($("#aq-figs"));
     /* quiet: hovering must not name the muscle the question is about. */
     bindFigures("aq", () => makeViewer($("#aq-3d"), { quiet: true })
-      .then((v) => v && v.loaded.then((ok) => { if (ok) { v.setFade(true); showQ(); } })), showQ);
+      .then((v) => whenLoaded(v, () => { v.setFade(true); showQ(); })), showQ);
     $("#aq-mode").addEventListener("click", (e) => {
       const b = e.target.closest("[data-q]"); if (!b) return;
       Q.mode = b.dataset.q; Q.right = Q.total = 0;
