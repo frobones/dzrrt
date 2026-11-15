@@ -23,6 +23,7 @@ The repository has two parts:
 | `Asian Med 2026 Mod 2 Meridian pt 2 (1).pptx` | Class slides, Meridian Theory part 2. Covers the sinew channels and which kata lines they cover, plus points ST 36, LI 4 and GB 20. | Unzip it and read the `<a:t>` runs in `ppt/slides/slideN.xml`. The speaker notes are empty. |
 | `Asian Med Mod 2 Pathogens and Emotions (1).pdf` | Instructor handout on the six external pathogens and the seven emotions. Asks "How would you treat X with DZRRT?" and gives treatment zones and points. | Text layer OK |
 | `Asian Med Mod 2 Types of Pain PDF.pdf` | Instructor handout "Pathophysiology of Pain", by a DZRSI Program Instructor. Covers the six pain types and the Eight Entities applied to pain. | Text layer OK |
+| `Anatomy Coloring Book.pdf` | *Netter's Anatomy Coloring Book*, the course's anatomy text (Handbook 4.53). 387 pages in 11 chapters; each plate is a text page followed by a figure page. Chapter 2 (skeletal, plates 2-1 to 2-20) is PDF pages 33–74 and chapter 3 (muscular, 3-1 to 3-32) is pages 77–143: plate 2-n starts on PDF page 31 + 2n, and plate 3-n on 75 + 2n. | Text layer OK. Origin/insertion tables interleave their columns, so rebuild rows with care. |
 
 The last slide of the Meridian Theory PDF duplicates slide 1 of the pptx.
 
@@ -74,7 +75,7 @@ Shoden material as assumed prior knowledge.
 | Exam rules (catalog) | 1.10–1.11. Kata minimum is 80%. Written exams need an average of at least 75%, with no single exam below 70%. |
 | Chuden Ichi kata/Seifukujitsu | 2.2. Assessed through the course; selected arts are graded pass/fail. |
 | Asian Medicine | 3.4–3.7, plus the homework at 3.8 |
-| Anatomy | 4.54 for Chuden. 4.4 is the Shoden guide. |
+| Anatomy | 4.53 for Chuden. 4.4 is the Shoden guide. The exam muscle list (4.54–4.61) gives each muscle's Netter plate; the coloring assignments are at 4.52. |
 | Standards of Practice | 5.4 |
 | History | 6.3 |
 
@@ -153,6 +154,8 @@ this kata step affect" questions.
   which are instructor elaborations and generally agree with the handbook. Use general
   TCM knowledge last, and **label it as outside the course material**. Exam answers
   should match the handbook's wording and lists, even where standard TCM texts differ.
+- **The anatomy text.** *Netter's Anatomy Coloring Book* is the course's assigned anatomy book, so it sits
+  with the handbook as a course source. Cite it by plate, for example "Netter plate 3-9".
 - **Citing.** Cite every substantive claim with a handbook label or a handout filename.
   If the corpus doesn't cover something, say so rather than filling the gap.
 - **Pain material spans three sources, and they complement each other:**
@@ -209,6 +212,34 @@ answers.
   - Taisho is given as "1912–1989"; it was actually 1912–1926.
   - Sakoku overlaps Edo.
 
+### Netter's Anatomy Coloring Book
+
+These were checked against the PDF's text. The site data uses the corrected value and
+says what the book prints.
+
+- **2-3.** The abducent nerve is labelled "(IV)". It is cranial nerve VI.
+- **2-8, 2-10.** The text says 16 muscles attach to the scapula, but the 2-10 table
+  counts 17.
+- **2-13.** "Most commonly fractured carpal" sits on the lunate row. It is the scaphoid.
+- **2-14.** The "Distal Radiocarpal (pivot) Joint" row describes the distal radio-ulnar
+  joint. The radial collateral ligament is run to the scaphoid and triquetrum; it
+  attaches to the scaphoid, and the triquetrum is on the ulnar side.
+- **2-15.** The sacrococcygeal disc is placed between S5 and "C1". It is Co1.
+- **3-22.** Extensor pollicis brevis is said to extend the proximal phalanx at the
+  carpometacarpal joint. The proximal phalanx moves at the MCP joint.
+- **3-26.** Semitendinosus nerve roots are printed as L2-S2. The other hamstrings, and
+  standard anatomy, give L5-S2.
+- **3-31.** Abductor hallucis acts at the "metacarpophalangeal" joint; in the foot that
+  is the metatarsophalangeal joint. The plantar interossei are said to adduct digits
+  2-4, but they attach to and adduct toes 3-5.
+
+These were checked and are **not** errors:
+
+- **3-23.** Lumbricals 3 and 4 arising from the "medial three" flexor digitorum
+  profundus tendons. Each lumbrical takes the sides of two neighboring tendons.
+- **3-1.** Frontalis given as running from the forehead skin to the epicranial
+  aponeurosis. Texts differ on which end they call the origin.
+
 ### Spelling variants
 These appear as printed in the source:
 - "Seigotsu" (usually Seikotsu)
@@ -240,6 +271,28 @@ These appear as printed in the source:
 - **Real names.** Quiz and example material may name the historical figures the
   handbook covers. For example clients, case studies and forms, use made-up
   placeholders, never real people.
+
+## License exception: share-alike anatomy models
+
+The BRS standard allows only permissive licenses. For this project the owner approved
+one exception, because the site is a free, personal study tool that is never sold.
+
+- **Allowed:** 3D anatomy models under CC BY-SA, namely Z-Anatomy (CC BY-SA 4.0), which
+  is built on BodyParts3D. BodyParts3D itself is CC BY 4.0 since its license page was
+  updated on 2025-02-27, even though its OBJ file headers still carry the older CC BY-SA
+  2.1 Japan notice.
+- **Why:** BodyParts3D alone lacks six exam muscles (latissimus dorsi, rectus abdominis,
+  internal oblique, transversus abdominis, quadratus lumborum, multifidi) and every knee
+  ligament. Z-Anatomy has all of them.
+- **Obligations:**
+  - Credit both sources on the site.
+  - Keep any model files derived from them under CC BY-SA 4.0, and say so where they
+    are published.
+  - Never sell the site or its models.
+- **Still excluded:** the parts of Z-Anatomy under non-commercial licenses: the inner
+  ear (CC BY-NC-SA) and the kidney (CC BY-NC). Do not export them.
+- **Scope:** this exception covers anatomy model data only. Code dependencies still need
+  permissive licenses.
 
 ## Working tips
 
@@ -285,16 +338,46 @@ Then open `http://localhost:8765`. `.claude/launch.json` defines the same server
 | `docs/js/data/kata.js` | The 60 kata steps and the zoom regions |
 | `docs/js/data/theory.js` | Five Phases, emotions, pain types, channel layers, depth zones |
 | `docs/js/data/lenses.js` | Two Lenses content: ground rules, frame shifts, complaints, muscle map, terms |
+| `docs/js/data/anatomy-muscles.js` | The 188 chapter 3 muscles: attachments, action, nerve, exam flag, and origin/insertion landmarks for the figure |
+| `docs/js/data/anatomy-bones.js` | Figure landmarks, the chapter 2 bones and joints, plate summaries, and the Handbook 4.52 plate assignments |
 | `docs/js/data/terms.js` | Body Terms content: positions, directions, planes, movements, glossary (Handbook 4.5-4.7) |
 | `docs/js/body.js` | The body figure: silhouette, channels, points, zoom and pan |
 | `docs/js/app.js` | Routing, the Atlas view, and the point detail panel |
 | `docs/js/views.js` | Kata, Body Clock, Five Phases, and Depth views |
 | `docs/js/study.js` | The quiz modes |
 | `docs/js/lenses.js` | The Two Lenses view |
+| `docs/js/anatomy.js` | The Anatomy view: muscle explorer, bones and joints, plate checklist, and muscle quiz |
+| `docs/models/` | 3D bones, muscles, joints and attachment surfaces (CC BY-SA 4.0, see its README) and the muscle-to-model map |
+| `tools/anatomy/` | Scripts that build the 3D data from the Z-Anatomy file: `export_models.py` and `map_muscles.py` make `docs/models/`; `dump_2d.mjs` and `project_2d.py` make `body-3d.js` |
+| `docs/js/viewer3d.js` | The 3D viewer (an ES module, loaded on demand): muscles, bones, joints, attachments, points and channels |
+| `docs/js/figure3d.js` | Loads the viewer, wraps it in the 2D figure's methods (`Atlas.Figure3D`), and holds the shared 2D/3D choice |
+| `docs/js/data/body-3d.js` | Generated 3D positions for the points, channel paths and kata regions |
+| `docs/vendor/three-0.186.1/` | three.js 0.186.1 (MIT) with its glTF and Draco loaders, orbit controls, and the Draco decoder (Apache-2.0) |
 | `docs/js/terms.js` | The Body Terms view and its movement diagrams |
 
 Scripts are classic (not ES modules) and share one global, `window.Atlas`. Load order
 in `index.html` matters: data first, then `body.js`, then the views.
+
+The one exception is the 3D viewer, `viewer3d.js`, an ES module that `anatomy.js` loads
+with `import()` the first time the 3D view opens. The import map in `index.html` points
+`three` at the vendored copy. **3D rendering uses three.js only**; upgrade it by
+replacing the versioned `docs/vendor/three-<version>/` folder and the import map.
+
+The Atlas, Kata and Anatomy views default to 3D and offer a 2D toggle; the choice is
+shared across views (`Atlas.dim()`). Other figures (Body Clock, Five Phases, Study,
+Two Lenses, Body Terms) stay 2D.
+
+**When point or channel positions change in 2D, regenerate the 3D positions:**
+
+```bash
+node tools/anatomy/dump_2d.mjs > temp/proj/input.json
+blender -b --disable-autoexec temp/zanatomy/x/Z-Anatomy/Startup.blend \
+  --python tools/anatomy/project_2d.py -- temp/proj/input.json docs/js/data/body-3d.js temp/proj/check
+```
+
+The optional last argument writes front and back check renders; look at them before
+committing. The projection warps the 2D figure onto the 3D body with about twenty
+shared landmarks, so 3D positions are as approximate as the 2D ones.
 
 ### Content rules for the site
 

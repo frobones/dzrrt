@@ -39,7 +39,7 @@ window.Atlas = window.Atlas || {};
   }
 
   /* ---------- Routing ---------- */
-  const VIEWS = ["atlas", "kata", "clock", "phases", "depth", "study", "lenses", "terms"];
+  const VIEWS = ["atlas", "kata", "clock", "phases", "depth", "study", "lenses", "terms", "anatomy"];
   const inited = {};
   function show(view, arg) {
     if (!VIEWS.includes(view)) view = "atlas";
@@ -48,9 +48,10 @@ window.Atlas = window.Atlas || {};
     if (!inited[view]) { inited[view] = true; (view === "atlas" ? initAtlas : Atlas.views[view])(); }
     if (view === "atlas" && arg) selectPoint(arg, false);
     if (view === "kata" && arg !== undefined && Atlas.kataGo) Atlas.kataGo(arg);
+    if (view === "anatomy" && arg && Atlas.anatomyGo) Atlas.anatomyGo(arg);
   }
   Atlas.go = function (view, arg) {
-    const hash = view === "atlas" && arg ? "p-" + arg : view === "kata" && arg !== undefined ? "kata-" + arg : view;
+    const hash = view === "atlas" && arg ? "p-" + arg : view === "kata" && arg !== undefined ? "kata-" + arg : view === "anatomy" && arg ? "m-" + arg : view;
     if (location.hash !== "#" + hash) history.replaceState(null, "", "#" + hash);
     show(view, arg);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -59,6 +60,7 @@ window.Atlas = window.Atlas || {};
     const h = location.hash.slice(1);
     if (h.startsWith("p-")) return show("atlas", h.slice(2));
     if (h.startsWith("kata-")) return show("kata", Number(h.slice(5)));
+    if (h.startsWith("m-")) return show("anatomy", h.slice(2));
     show(h || "atlas");
   }
 
@@ -71,7 +73,7 @@ window.Atlas = window.Atlas || {};
   });
 
   /* ---------- Atlas view ---------- */
-  const A = { figs: [], chans: new Set(Object.keys(Atlas.CHANNELS)), cats: new Set(), course: false, q: "", layer: "primary", sel: null };
+  const A = { figs: [], figs2d: [], fig3d: null, dim: Atlas.dim(), chans: new Set(Object.keys(Atlas.CHANNELS)), cats: new Set(), course: false, q: "", layer: "primary", sel: null };
 
   function initAtlas() {
     const root = $("#view-atlas");
@@ -114,15 +116,35 @@ window.Atlas = window.Atlas || {};
                 .map(([k, l]) => `<button class="chip" data-region="${k}">${l}</button>`).join("")}
             </div>
             <span class="muted" id="count" style="font-size:13px"></span>
+            <div class="seg" id="atlas-dim" role="group" aria-label="Figure type"><button data-dim="3d">3D</button><button data-dim="2d">2D</button></div>
           </div>
-          <div class="figures"><div id="fig-front"></div><div id="fig-back"></div></div>
-          <p class="muted" style="font-size:12.5px;margin:0">Scroll or pinch to zoom, drag to pan. Positions are approximate study guides; always locate points by palpation.</p>
+          <div class="figures" id="atlas-figs"><div id="fig-front"></div><div id="fig-back"></div></div>
+          <div class="body3d" id="atlas-3d" hidden></div>
+          <p class="muted" style="font-size:12.5px;margin:0" id="atlas-help"></p>
         </section>
         <aside class="detail panel" id="detail" aria-live="polite"></aside>
       </div>`;
 
     const onPoint = (id) => selectPoint(id, true);
-    A.figs = [new Atlas.Figure($("#fig-front"), "front", { onPoint }), new Atlas.Figure($("#fig-back"), "back", { onPoint })];
+    A.figs2d = [new Atlas.Figure($("#fig-front"), "front", { onPoint }), new Atlas.Figure($("#fig-back"), "back", { onPoint })];
+    /* 3D shows one rotatable body in place of the two flat figures; the same filters drive both. */
+    const setDim = (dim) => {
+      A.dim = dim;
+      Atlas.setDim(dim);
+      $("#atlas-dim").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.dim === dim)));
+      $("#atlas-figs").hidden = dim === "3d";
+      $("#atlas-3d").hidden = dim !== "3d";
+      $("#flow").closest("label").hidden = $("#labels").closest("label").hidden = dim === "3d";
+      $("#atlas-help").textContent = (dim === "3d"
+        ? "Drag to turn the body, scroll or pinch to zoom, right-drag to move. Points sit on the muscle surface. "
+        : "Scroll or pinch to zoom, drag to pan. ") + "Positions are approximate study guides; always locate points by palpation.";
+      if (dim === "3d" && !A.fig3d) A.fig3d = new Atlas.Figure3D($("#atlas-3d"), { onPoint });
+      A.figs = dim === "3d" ? [A.fig3d] : A.figs2d;
+      refresh();
+      if (A.sel) selectPoint(A.sel, false);
+    };
+    $("#atlas-dim").addEventListener("click", (e) => { const b = e.target.closest("[data-dim]"); if (b && b.dataset.dim !== A.dim) setDim(b.dataset.dim); });
+    document.addEventListener("dimchange", (e) => { if (e.detail !== A.dim) setDim(e.detail); });
 
     $("#q").addEventListener("input", (e) => { A.q = e.target.value.trim().toLowerCase(); refresh(); });
     $("#layer").addEventListener("click", (e) => {
@@ -153,7 +175,7 @@ window.Atlas = window.Atlas || {};
       const b = e.target.closest("[data-region]"); if (!b) return;
       A.figs.forEach((f) => f.zoomTo(Atlas.REGIONS[b.dataset.region]));
     });
-    refresh();
+    setDim(A.dim);
     if (!A.sel) renderDetail(null);
   }
 
@@ -220,6 +242,7 @@ window.Atlas = window.Atlas || {};
     const depth = Atlas.ZONES[p.z].depth;
     const cats = p.cats.map((c) => `<span class="chip" title="${esc(Atlas.CATEGORIES[c].tip)}">${esc(Atlas.CATEGORIES[c].label)}</span>`).join("");
     const steps = kataSteps(id);
+    const muscles = Atlas.musclesUnder ? Atlas.musclesUnder(id).sort((a, b) => !!b.exam - !!a.exam) : [];
     box.innerHTML = `
       <div class="d-head">
         <div class="d-hz" style="color:${Atlas.pointColor(p)}">${esc(p.hz)}</div>
@@ -239,6 +262,7 @@ window.Atlas = window.Atlas || {};
       </div>
       ${p.course && p.course.length ? `<div class="d-section"><h4>In the course</h4>${p.course.map((c) => `<div class="course-note">${esc(c.t)}<div class="src">${esc(c.ref)}</div></div>`).join("")}</div>` : ""}
       ${steps.length ? `<div class="d-section"><h4>Kata steps</h4><div class="chips">${steps.map((s) => `<button class="chip" data-kata="${Atlas.KATA.indexOf(s)}">Step ${esc(s.n)} · ${esc(s.t)}</button>`).join("")}</div></div>` : ""}
+      ${muscles.length ? `<div class="d-section"><h4>Muscles under it <span class="tag-outside">approximate</span></h4><div class="chips">${muscles.map((m) => `<button class="chip" data-muscle="${m.id}">${esc(m.n)}</button>`).join("")}</div></div>` : ""}
       <div class="d-section"><h4>Traditional actions <span class="tag-outside">general TCM</span></h4><ul>${p.fx.map((f) => `<li>${esc(f)}</li>`).join("")}</ul></div>
       ${p.caut ? `<div class="caution"><b>Caution.</b> ${esc(p.caut)}</div>` : ""}
       ${p.combos && p.combos.length ? `<div class="d-section"><h4>Works with</h4>${p.combos.map((c) => `<div class="combo"><div>${ptLink(c.w)} <b>${esc(c.n)}</b></div><div class="muted" style="font-size:13.5px">${esc(c.t)}</div></div>`).join("")}</div>` : ""}

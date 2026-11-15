@@ -26,21 +26,38 @@ Atlas.views = Atlas.views || {};
       <p class="view-intro">Walk through the 60-step kata in order. Each step zooms to where your hands are and lights up the channels and points underneath them. Use the arrow keys or the Play button. Step names follow the handbook (2.35-2.47); notes are summaries.</p>
       <div class="kata">
         <nav class="panel kata-list" id="kata-list" aria-label="Kata steps">${groups}</nav>
-        <div class="kata-figure" id="kata-fig"></div>
+        <div class="kata-figure">
+          <div class="seg kata-dim" id="kata-dim" role="group" aria-label="Figure type"><button data-dim="3d">3D</button><button data-dim="2d">2D</button></div>
+          <div id="kata-fig"></div>
+          <div class="body3d" id="kata-3d" hidden></div>
+        </div>
         <aside class="panel kata-card" id="kata-card"></aside>
       </div>`;
-    let i = 0, timer = null, fig = null, figView = null;
+    let i = 0, timer = null, fig = null, figView = null, fig3d = null;
 
     function render() {
       const s = Atlas.KATA[i];
       const grp = Atlas.KATA_GROUPS.find((g) => g.id === s.g);
       const view = s.v || (grp.pos === "prone" ? "back" : "front");
-      if (view !== figView) { fig = new Atlas.Figure($("#kata-fig"), view, { onPoint: (id) => Atlas.go("atlas", id) }); figView = view; fig.svg.classList.add("labels-hl-only"); }
-      fig.clearOverlay();
-      if (s.lines) fig.drawKataLines();
-      fig.highlight(s.ch, s.pts);
-      fig.filterPoints((p) => s.pts.includes(p.id) || s.ch.includes(p.ch));
-      fig.zoomTo(regionFor(s, view));
+      const dim = Atlas.dim();
+      $("#kata-dim").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.dim === dim)));
+      $("#kata-fig").hidden = dim === "3d";
+      $("#kata-3d").hidden = dim !== "3d";
+      if (dim === "3d") {
+        if (!fig3d) fig3d = new Atlas.Figure3D($("#kata-3d"), { onPoint: (id) => Atlas.go("atlas", id) });
+        fig3d.highlight(s.ch, s.pts);
+        fig3d.filterPoints((p) => s.pts.includes(p.id) || s.ch.includes(p.ch));
+        fig3d.showChannels(s.ch.length ? new Set(s.ch) : null);
+        fig3d.focusKata(s.r, view, s.side);
+      }
+      if (dim === "2d" && view !== figView) { fig = new Atlas.Figure($("#kata-fig"), view, { onPoint: (id) => Atlas.go("atlas", id) }); figView = view; fig.svg.classList.add("labels-hl-only"); }
+      if (dim === "2d") {
+        fig.clearOverlay();
+        if (s.lines) fig.drawKataLines();
+        fig.highlight(s.ch, s.pts);
+        fig.filterPoints((p) => s.pts.includes(p.id) || s.ch.includes(p.ch));
+        fig.zoomTo(regionFor(s, view));
+      }
       root.querySelectorAll("#kata-list button").forEach((b) => b.setAttribute("aria-current", Number(b.dataset.i) === i ? "true" : "false"));
       const cur = root.querySelector(`#kata-list button[data-i="${i}"]`);
       if (cur) {
@@ -78,6 +95,11 @@ Atlas.views = Atlas.views || {};
     }
     Atlas.kataGo = (n) => { if (!Number.isNaN(n)) go(n); };
     $("#kata-list").addEventListener("click", (e) => { const b = e.target.closest("button[data-i]"); if (b) go(Number(b.dataset.i)); });
+    $("#kata-dim").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-dim]"); if (!b || b.dataset.dim === Atlas.dim()) return;
+      Atlas.setDim(b.dataset.dim);
+    });
+    document.addEventListener("dimchange", () => { figView = null; render(); });
     document.addEventListener("keydown", (e) => {
       if (!$("#view-kata").classList.contains("active") || e.target.matches("input, textarea")) return;
       if (e.key === "ArrowRight") go(i + 1);

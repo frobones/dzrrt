@@ -9,6 +9,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Shippori+Mincho+B1:wght@600;700&display=swap">
   <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three-0.186.1/build/three.module.js", "three/addons/": "./vendor/three-0.186.1/examples/jsm/" } }
+  </script>
 </head>
 <body>
   <header class="top">
@@ -28,6 +31,7 @@
       <a href="#study">Study</a>
       <a href="#lenses">Two Lenses</a>
       <a href="#terms">Body Terms</a>
+      <a href="#anatomy">Anatomy</a>
     </nav>
     <button class="theme-btn" id="theme" type="button">Theme: auto</button>
   </header>
@@ -41,6 +45,7 @@
     <section class="view" id="view-study" aria-label="Study"></section>
     <section class="view" id="view-lenses" aria-label="Two Lenses"></section>
     <section class="view" id="view-terms" aria-label="Body terms"></section>
+    <section class="view" id="view-anatomy" aria-label="Anatomy"></section>
   </main>
 
   <footer class="foot">
@@ -53,14 +58,19 @@
   <script src="js/data/points-1.js"></script>
   <script src="js/data/points-2.js"></script>
   <script src="js/data/kata.js"></script>
+  <script src="js/data/body-3d.js"></script>
   <script src="js/data/theory.js"></script>
   <script src="js/data/lenses.js"></script>
   <script src="js/data/terms.js"></script>
+  <script src="js/data/anatomy-muscles.js"></script>
+  <script src="js/data/anatomy-bones.js"></script>
   <script src="js/body.js"></script>
+  <script src="js/figure3d.js"></script>
   <script src="js/app.js"></script>
   <script src="js/views.js"></script>
   <script src="js/study.js"></script>
   <script src="js/lenses.js"></script>
   <script src="js/terms.js"></script>
+  <script src="js/anatomy.js"></script>
 </body>
 </html>
