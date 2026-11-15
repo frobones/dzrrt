@@ -15,7 +15,8 @@ window.Atlas = window.Atlas || {};
   const $ = (s) => document.querySelector(s);
   const esc = (s) => Atlas.esc(s);
   const FUSE_URL = new URL("../vendor/fuse-7.5.0/fuse.basic.min.mjs", document.currentScript.src).href;
-  const KINDS = { point: "Points", channel: "Channels", kata: "Kata steps", muscle: "Muscles", bone: "Bones", landmark: "Landmarks", joint: "Joints" };
+  /* Result groups show in this order: anatomy first, then points, then the rest. */
+  const KINDS = { muscle: "Muscles", bone: "Bones", point: "Points", landmark: "Landmarks", joint: "Joints", channel: "Channels", kata: "Kata steps" };
   const PER_KIND = 6;
   /* Lower case, accents dropped ("Hégǔ" -> "hegu"), so typing needs no special characters. */
   const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
