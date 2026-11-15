@@ -239,7 +239,19 @@ a.pt, button.pt {
 .web text { font: 500 9px var(--f-body); fill: var(--ink); }
 .web .node { cursor: pointer; }
 .web .node circle { stroke-width: 1.2; }
-.web .edge { fill: none; stroke-width: 1.4; opacity: 0.85; }
+.web .edge, .web-key .edge { fill: none; stroke: var(--muted); stroke-width: 1.4; }
+:is(.web, .web-key) .edge-related { stroke-dasharray: 5 4; }
+:is(.web, .web-key) .edge-kata { stroke-dasharray: 0.1 4; stroke-linecap: round; stroke-width: 2.4; }
+:is(.web, .web-key) .edge-emotion { stroke-dasharray: 9 3 1.5 3; }
+:is(.web, .web-key) .edge-pair { stroke-width: 4.4; }
+:is(.web, .web-key) .edge-pair-gap { stroke: var(--surface); stroke-width: 1.6; }
+.web-key { width: 24px; height: 8px; flex: none; }
+.legend span:has(.web-key) { display: inline-flex; align-items: center; gap: 5px; }
+.web-phases { margin-top: 6px; }
+.web-phases span { display: inline-flex; align-items: center; gap: 5px; }
+/* A key dot drawn like the web's nodes: a ring with a filled center, or a hollow ring. */
+.web-dot { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid currentColor; background: radial-gradient(circle, currentColor 0 2.5px, transparent 3px); }
+.web-dot.hollow { color: var(--muted); background: none; }
 .web .center-text { font: 600 12px var(--f-mono); }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--muted); }
 .legend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 4px; }
