@@ -23,7 +23,7 @@ The repository has two parts:
 | `Asian Med 2026 Mod 2 Meridian pt 2 (1).pptx` | Class slides, Meridian Theory part 2. Covers the sinew channels and which kata lines they cover, plus points ST 36, LI 4 and GB 20. | Unzip it and read the `<a:t>` runs in `ppt/slides/slideN.xml`. The speaker notes are empty. |
 | `Asian Med Mod 2 Pathogens and Emotions (1).pdf` | Instructor handout on the six external pathogens and the seven emotions. Asks "How would you treat X with DZRRT?" and gives treatment zones and points. | Text layer OK |
 | `Asian Med Mod 2 Types of Pain PDF.pdf` | Instructor handout "Pathophysiology of Pain", by a DZRSI Program Instructor. Covers the six pain types and the Eight Entities applied to pain. | Text layer OK |
-| `Anatomy Coloring Book.pdf` | *Netter's Anatomy Coloring Book*, the course's anatomy text (Handbook 4.53). 387 pages in 11 chapters; each plate is a text page followed by a figure page. Chapter 2 (skeletal, plates 2-1 to 2-20) is PDF pages 33–74 and chapter 3 (muscular, 3-1 to 3-32) is pages 77–143: plate 2-n starts on PDF page 31 + 2n, and plate 3-n on 75 + 2n. | Text layer OK. Origin/insertion tables interleave their columns, so rebuild rows with care. |
+| `Anatomy Coloring Book.pdf` | *Netter's Anatomy Coloring Book*, the course's anatomy text (Handbook 4.54). 387 pages in 11 chapters; each plate is a text page followed by a figure page. Chapter 2 (skeletal, plates 2-1 to 2-20) is PDF pages 33–74 and chapter 3 (muscular, 3-1 to 3-32) is pages 77–143: plate 2-n starts on PDF page 31 + 2n, and plate 3-n on 75 + 2n. | Text layer OK. Origin/insertion tables interleave their columns, so rebuild rows with care. |
 
 The last slide of the Meridian Theory PDF duplicates slide 1 of the pptx.
 
@@ -75,7 +75,7 @@ Shoden material as assumed prior knowledge.
 | Exam rules (catalog) | 1.10–1.11. Kata minimum is 80%. Written exams need an average of at least 75%, with no single exam below 70%. |
 | Chuden Ichi kata/Seifukujitsu | 2.2. Assessed through the course; selected arts are graded pass/fail. |
 | Asian Medicine | 3.4–3.7, plus the homework at 3.8 |
-| Anatomy | 4.53 for Chuden. 4.4 is the Shoden guide. The exam muscle list (4.54–4.61) gives each muscle's Netter plate; the coloring assignments are at 4.52. |
+| Anatomy | 4.54 for Chuden. 4.4 is the Shoden guide. The exam muscle list (4.55–4.61) gives each muscle's Netter plate; the coloring assignments are at 4.53 and the palpable landmarks at 4.64. |
 | Standards of Practice | 5.4 |
 | History | 6.3 |
 
@@ -339,19 +339,20 @@ Then open `http://localhost:8765`. `.claude/launch.json` defines the same server
 | `docs/js/data/theory.js` | Five Phases, emotions, pain types, channel layers, depth zones |
 | `docs/js/data/lenses.js` | Two Lenses content: ground rules, frame shifts, complaints, muscle map, terms |
 | `docs/js/data/anatomy-muscles.js` | The 188 chapter 3 muscles: attachments, action, nerve, exam flag, and origin/insertion landmarks for the figure |
-| `docs/js/data/anatomy-bones.js` | Figure landmarks, the chapter 2 bones and joints, plate summaries, and the Handbook 4.52 plate assignments |
+| `docs/js/data/anatomy-bones.js` | Figure landmarks, the chapter 2 bones and joints, and plate summaries with their clinical notes |
 | `docs/js/data/terms.js` | Body Terms content: positions, directions, planes, movements, glossary (Handbook 4.5-4.7) |
 | `docs/js/body.js` | The body figure: silhouette, channels, points, zoom and pan |
 | `docs/js/app.js` | Routing, the Atlas view, and the point detail panel |
 | `docs/js/views.js` | Kata, Body Clock, Five Phases, and Depth views |
 | `docs/js/study.js` | The quiz modes |
 | `docs/js/lenses.js` | The Two Lenses view |
-| `docs/js/anatomy.js` | The Anatomy view: muscle explorer, bones and joints, plate checklist, and muscle quiz |
+| `docs/js/anatomy.js` | The Anatomy view: muscle explorer, bones and joints, and muscle quiz |
 | `docs/models/` | 3D bones, muscles, joints and attachment surfaces (CC BY-SA 4.0, see its README) and the muscle-to-model map |
-| `tools/anatomy/` | Scripts that build the 3D data from the Z-Anatomy file: `export_models.py` and `map_muscles.py` make `docs/models/`; `dump_2d.mjs` and `project_2d.py` make `body-3d.js` |
+| `tools/anatomy/` | Scripts that build the 3D data from the Z-Anatomy file: `export_models.py` and `map_muscles.py` make `docs/models/`; `dump_2d.mjs` and `project_2d.py` make `body-3d.js`; `anatomy_3d.py` makes `anatomy-3d.js` |
 | `docs/js/viewer3d.js` | The 3D viewer (an ES module, loaded on demand): muscles, bones, joints, attachments, points and channels |
 | `docs/js/figure3d.js` | Loads the viewer, wraps it in the 2D figure's methods (`Atlas.Figure3D`), and holds the shared 2D/3D choice |
 | `docs/js/data/body-3d.js` | Generated 3D positions for the points, channel paths and kata regions |
+| `docs/js/data/anatomy-3d.js` | Generated: where each Anatomy landmark sits on the 3D bones, and which model pieces make up each bone and joint |
 | `docs/vendor/three-0.186.1/` | three.js 0.186.1 (MIT) with its glTF and Draco loaders, orbit controls, and the Draco decoder (Apache-2.0) |
 | `docs/js/terms.js` | The Body Terms view and its movement diagrams |
 
@@ -362,6 +363,10 @@ The one exception is the 3D viewer, `viewer3d.js`, an ES module that `anatomy.js
 with `import()` the first time the 3D view opens. The import map in `index.html` points
 `three` at the vendored copy. **3D rendering uses three.js only**; upgrade it by
 replacing the versioned `docs/vendor/three-<version>/` folder and the import map.
+
+The Atlas, Study and Anatomy pages carry an Exam | Everything switch
+(`Atlas.scopeSwitch()`); the choice is site-wide (`Atlas.examOnly()`, event
+`scopechange`) and defaults to Exam. A page that adds exam-scoped content should use it.
 
 The Atlas, Kata and Anatomy views default to 3D and offer a 2D toggle; the choice is
 shared across views (`Atlas.dim()`). Other figures (Body Clock, Five Phases, Study,
@@ -378,6 +383,19 @@ blender -b --disable-autoexec temp/zanatomy/x/Z-Anatomy/Startup.blend \
 The optional last argument writes front and back check renders; look at them before
 committing. The projection warps the 2D figure onto the 3D body with about twenty
 shared landmarks, so 3D positions are as approximate as the 2D ones.
+
+**When the anatomy landmarks, bones or joints change, regenerate their 3D data:**
+
+```bash
+node tools/anatomy/dump_2d.mjs > temp/proj/input.json
+blender -b --disable-autoexec temp/zanatomy/x/Z-Anatomy/Startup.blend \
+  --python tools/anatomy/anatomy_3d.py -- temp/proj/input.json docs/js/data/anatomy-3d.js
+```
+
+Each landmark, bone and joint needs an entry in the script's tables, which map it to
+Z-Anatomy's labeled feature or to model pieces; the script stops on a missing entry or
+an unknown piece name. Landmarks that use a labeled feature sit where the model puts
+it, not where the 2D figure does.
 
 ### Content rules for the site
 

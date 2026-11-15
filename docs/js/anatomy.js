@@ -1,10 +1,11 @@
 /*
  * Anatomy view: bones and muscles from Netter's Anatomy Coloring Book, the course's
- * anatomy text (Handbook 4.53), tied to the channels, points and kata.
- * Panels: a muscle explorer, in 3D (docs/js/viewer3d.js, loaded on demand) or as a
- * line of pull on the 2D figure,
- * bones and joints with their landmarks, the plate coloring checklist, and a quiz.
- * The Chuden exam list (Handbook 4.54-4.61) is the default; a toggle shows all 188.
+ * anatomy text (Handbook 4.54), tied to the channels, points and kata.
+ * Panels: a muscle explorer, bones and joints with their landmarks, and a quiz, each
+ * showing the body in 3D (docs/js/viewer3d.js, loaded on demand) or on the 2D figure.
+ * Muscle and bone cards carry the book's plate summaries and clinical notes.
+ * The site-wide Exam | Everything switch (Atlas.examOnly) scopes the muscles, quiz and bones
+ * to what the anatomy study guide covers (Handbook 4.54); Exam is the default.
  */
 window.Atlas = window.Atlas || {};
 Atlas.views = Atlas.views || {};
@@ -33,18 +34,90 @@ Atlas.views = Atlas.views || {};
     [/flex|extend|extension/i, "flex", "Flexion · extension"],
   ];
   const byId = Object.fromEntries(Atlas.MUSCLES.map((m) => [m.id, m]));
-  const S = { exam: Atlas.store.get("anatExam", true), panel: "muscles", muscle: null, dim: Atlas.dim() };
+  const PLATE = Object.fromEntries(Atlas.PLATES.map((p) => [p.id, p]));
+  /*
+   * Overview plates no single muscle or bone is drawn on, shown on the cards they explain:
+   * the vertebral column and the inside of the skull, the inguinal region, pronation and supination.
+   */
+  const SPINE = ["Atlas (C1)", "Axis (C2)", "Cervical vertebrae (C3–C7)", "Thoracic vertebrae (T1–T12)", "Lumbar vertebrae (L1–L5)", "Sacrum", "Coccyx"];
+  const RELATED_PLATES = {
+    ...Object.fromEntries(SPINE.map((b) => [b, ["2-5"]])),
+    ...Object.fromEntries(Atlas.BONES.filter((b) => b.region === "head").map((b) => [b.name, ["2-3"]])),
+    ...Object.fromEntries(["external-abdominal-oblique", "internal-abdominal-oblique", "transversus-abdominis"].map((id) => [id, ["3-13"]])),
+    ...Object.fromEntries(["pronator-teres", "pronator-quadratus", "supinator", "biceps-brachii"].map((id) => [id, ["3-20"]])),
+  };
+  /** The book's summary of each plate, folded away, and its clinical notes. */
+  function fromPlates(ids) {
+    const ps = [...new Set(ids)].map((id) => PLATE[id]).filter(Boolean);
+    return ps.length ? `<div class="d-section"><h4>From the book</h4>${ps.map((p) => `
+      <details class="plate-more"><summary>Plate ${esc(p.id)}: ${esc(p.t)}</summary><p>${esc(p.d)}</p></details>
+      ${(p.clin || []).map((c) => `<div class="note-box"><b>${esc(c.t)}.</b> ${esc(c.d)}</div>`).join("")}`).join("")}</div>` : "";
+  }
+  const S = { panel: "muscles", muscle: null, dim: Atlas.dim() };
   let viewer = null, viewerRequest = 0;
   /* The panel re-renders on a deep link or a scope change; only the newest request may keep its viewer. */
-  async function makeViewer(host, onPick) {
+  async function makeViewer(host, opts) {
     const request = ++viewerRequest;
-    if (viewer) { viewer.dispose(); viewer = null; }
-    const v = await Atlas.load3D(host, { onPick });
+    dropViewer();
+    const v = await Atlas.load3D(host, opts);
     if (!v) return null;
     if (request !== viewerRequest) { v.dispose(); return null; }
     viewer = v;
     Atlas.viewer3d = v;
     return v;
+  }
+  /* Browsers allow only a few WebGL contexts, so a panel's viewer goes when the panel does. */
+  function dropViewer() {
+    if (viewer) { viewer.dispose(); viewer = Atlas.viewer3d = null; }
+  }
+
+  const CREDIT = `3D model: <a href="https://github.com/Z-Anatomy/Models-of-human-anatomy">Z-Anatomy</a> (<a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>), built on <a href="https://dbarchive.biosciencedbc.jp/en/bodyparts3d/">BodyParts3D</a>, © The Database Center for Life Science (CC BY 4.0). Simplified for the web; see <a href="models/README.md">models/README.md</a>.`;
+  const TURN = `<div class="seg" role="group" aria-label="Turn the body"><button data-side="front">Front</button><button data-side="back">Back</button></div>`;
+  /*
+   * The 3D/2D switch, the 3D toolbar and both figure hosts, for every panel that shows the body.
+   * both: controls that apply to either figure type, so they stay visible in 2D.
+   */
+  function figColumn(id, tools, both = "") {
+    const d3 = S.dim === "3d";
+    return `<div class="anat-figcol">
+      <div class="v3d-bar">
+        <div class="seg" id="${id}-dim" role="group" aria-label="Figure type">
+          <button data-dim="3d" aria-pressed="${d3}">3D</button><button data-dim="2d" aria-pressed="${!d3}">2D</button>
+        </div>
+        <div class="v3d-tools" id="${id}-tools" ${d3 ? "" : "hidden"}>${TURN}${tools}</div>
+        ${both}
+      </div>
+      <div class="v3d-host" id="${id}-3d" ${d3 ? "" : "hidden"}></div>
+      <p class="v3d-credit" id="${id}-credit" ${d3 ? "" : "hidden"}>${CREDIT}</p>
+      <div class="figures" id="${id}-figs" ${d3 ? "hidden" : ""}></div>
+    </div>`;
+  }
+  /**
+   * Wire a figure column: start3d builds the viewer the first time 3D shows, and redraw
+   * shows the current selection after the figure type changes. The toolbar turns the
+   * body, toggles layers (data-layer) and sets viewer options (data-opt).
+   */
+  function bindFigures(id, start3d, redraw) {
+    $(`#${id}-dim`).addEventListener("click", (e) => {
+      const b = e.target.closest("[data-dim]"); if (!b || b.dataset.dim === S.dim) return;
+      S.dim = b.dataset.dim;
+      Atlas.setDim(S.dim);
+      $(`#${id}-dim`).querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      const d3 = S.dim === "3d";
+      $(`#${id}-3d`).hidden = $(`#${id}-tools`).hidden = $(`#${id}-credit`).hidden = !d3;
+      $(`#${id}-figs`).hidden = d3;
+      if (d3 && !$(`#${id}-3d`).childElementCount) start3d();
+      redraw();
+    });
+    $(`#${id}-tools`).addEventListener("click", (e) => { const b = e.target.closest("[data-side]"); if (b && viewer) viewer.view(b.dataset.side); });
+    $(`#${id}-tools`).addEventListener("change", (e) => {
+      if (!viewer) return;
+      const t = e.target;
+      if (t.dataset.layer) viewer.setLayer(t.dataset.layer, t.checked);
+      else if (t.dataset.opt === "sup") viewer.setDepth(t.checked ? "superficial" : "all");
+      else if (t.dataset.opt === "fade") viewer.setFade(t.checked);
+    });
+    if (S.dim === "3d") start3d();
   }
 
   /* ---------- Geometry: lines of pull and what lies under them ---------- */
@@ -73,48 +146,42 @@ Atlas.views = Atlas.views || {};
   const kataFor = (pts) => Atlas.KATA.filter((s, i) => s.pts.some((p) => pts.includes(p)) && Atlas.KATA.findIndex((x) => x.n === s.n) === i);
   const movesFor = (m) => { const seen = new Set(); return MOVES.filter(([re, id]) => re.test(m.a || "") && !seen.has(id) && seen.add(id)); };
 
-  const inPool = (m) => !S.exam || m.exam;
-  const examTag = (m) => m.exam ? `<span class="exam-tag" title="On the Chuden exam list, Handbook 4.54-4.61">Exam${typeof m.exam === "string" ? ` · ${esc(m.exam)}` : ""}</span>` : "";
+  const inPool = (m) => !Atlas.examOnly() || m.exam;
+  const examTag = (m) => m.exam ? `<span class="exam-tag" title="On the Chuden exam list, Handbook 4.55-4.61">Exam${typeof m.exam === "string" ? ` · ${esc(m.exam)}` : ""}</span>` : "";
   const muscleChip = (m) => `<button class="chip" data-muscle="${m.id}">${esc(m.n)}</button>`;
   const kataChip = (s) => `<button class="chip" data-kata="${Atlas.KATA.indexOf(s)}">Step ${esc(s.n)} · ${esc(s.t)}</button>`;
 
   Atlas.views.anatomy = function () {
     const root = $("#view-anatomy");
     root.innerHTML = `
-      <p class="view-intro">Bones and muscles from <i>Netter's Anatomy Coloring Book</i>, the course's anatomy text (Handbook 4.53), in our own words with the book's plate numbers. The exam covers the skull, spine and limbs, the palpable landmarks, the knee, and each listed muscle's origin, insertion and action (Handbook 4.53-4.61).</p>
+      <p class="view-intro">Bones and muscles from <i>Netter's Anatomy Coloring Book</i>, the course's anatomy text (Handbook 4.54), in our own words with the book's plate numbers. The exam covers the skull, spine and limbs, the palpable landmarks, the knee, and each listed muscle's origin, insertion and action (Handbook 4.54, muscle list 4.55-4.61). <b>Exam</b> shows just that; <b>Everything</b> adds the rest of the book's chapters 2 and 3.</p>
       <div class="anat-bar">
         <div class="seg" id="anat-panels" role="group" aria-label="Section">
           <button data-p="muscles" aria-pressed="true">Muscles</button><button data-p="bones" aria-pressed="false">Bones and joints</button>
-          <button data-p="plates" aria-pressed="false">Plates</button><button data-p="quiz" aria-pressed="false">Quiz</button>
+          <button data-p="quiz" aria-pressed="false">Quiz</button>
         </div>
-        <div class="seg" id="anat-scope" role="group" aria-label="Which muscles">
-          <button data-x="1" aria-pressed="${S.exam}">Exam list</button><button data-x="0" aria-pressed="${!S.exam}">All 188</button>
-        </div>
+        ${Atlas.scopeSwitch("Exam: the anatomy study guide's muscles and bones (Handbook 4.54). Everything: all 188 muscles and 55 bones.")}
       </div>
       <div id="anat-body"></div>`;
     $("#anat-panels").addEventListener("click", (e) => { const b = e.target.closest("[data-p]"); if (b) panel(b.dataset.p); });
-    $("#anat-scope").addEventListener("click", (e) => {
-      const b = e.target.closest("[data-x]"); if (!b) return;
-      S.exam = b.dataset.x === "1";
-      Atlas.store.set("anatExam", S.exam);
-      $("#anat-scope").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-      panel(S.panel);
-    });
+    document.addEventListener("scopechange", () => panel(S.panel));
     panel("muscles");
   };
 
   Atlas.anatomyGo = (id) => {
     if (!byId[id]) return;
-    if (S.exam && !byId[id].exam) { S.exam = false; $("#anat-scope").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.x === "0"))); }
     S.muscle = id;
+    /* A muscle off the exam list only shows under Everything. */
+    if (!byId[id].exam) Atlas.setExam(false);
     panel("muscles");
   };
 
   function panel(p) {
     S.panel = p;
     $("#anat-panels").querySelectorAll("[data-p]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.p === p)));
-    $("#anat-scope").hidden = p === "bones" || p === "plates";
-    ({ muscles, bones, plates, quiz })[p]();
+    viewerRequest++;
+    dropViewer();
+    ({ muscles, bones, quiz })[p]();
   }
 
   /* ---------- Figures ---------- */
@@ -151,50 +218,21 @@ Atlas.views = Atlas.views || {};
       <div class="anat-grid">
         <div class="rail panel">
           <input class="search" id="mus-q" type="search" placeholder="Search muscles" aria-label="Search muscles">
-          <p class="muted anat-count">${list.length} muscles${S.exam ? " on the exam list" : ""}</p>
+          <p class="muted anat-count">${list.length} muscles${Atlas.examOnly() ? " on the exam list" : ""}</p>
           <div id="mus-items" class="anat-list"></div>
         </div>
-        <div class="anat-figcol">
-          <div class="v3d-bar">
-            <div class="seg" id="mus-dim" role="group" aria-label="Figure type">
-              <button data-dim="3d" aria-pressed="${S.dim === "3d"}">3D</button><button data-dim="2d" aria-pressed="${S.dim === "2d"}">2D</button>
-            </div>
-            <div class="v3d-tools" id="v3d-tools" ${S.dim === "3d" ? "" : "hidden"}>
-              <div class="seg" role="group" aria-label="Turn the body"><button data-side="front">Front</button><button data-side="back">Back</button></div>
-              <label><input type="checkbox" data-layer="bones" checked> Bones</label>
-              <label><input type="checkbox" data-layer="joints"> Ligaments</label>
-              <label><input type="checkbox" id="v3d-sup"> Superficial only</label>
-              <label><input type="checkbox" id="v3d-fade" checked> Fade others</label>
-            </div>
-          </div>
-          <div id="mus-3d" ${S.dim === "3d" ? "" : "hidden"}></div>
-          <p class="v3d-credit" ${S.dim === "3d" ? "" : "hidden"}>3D model: <a href="https://github.com/Z-Anatomy/Models-of-human-anatomy">Z-Anatomy</a> (<a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>), built on <a href="https://dbarchive.biosciencedbc.jp/en/bodyparts3d/">BodyParts3D</a>, © The Database Center for Life Science (CC BY 4.0). Simplified for the web; see <a href="models/README.md">models/README.md</a>.</p>
-          <div class="figures" id="mus-figs" ${S.dim === "2d" ? "" : "hidden"}></div>
-        </div>
+        ${figColumn("mus", `
+          <label><input type="checkbox" data-layer="bones" checked> Bones</label>
+          <label><input type="checkbox" data-layer="joints"> Ligaments</label>
+          <label><input type="checkbox" data-opt="sup"> Superficial only</label>
+          <label><input type="checkbox" data-opt="fade" checked> Fade others</label>`)}
         <div class="panel anat-card" id="mus-card"></div>
       </div>`;
     const figs = figures($("#mus-figs"));
-    const start3d = () => makeViewer($("#mus-3d"), (id) => (list.some((m) => m.id === id) ? pick(id) : Atlas.anatomyGo(id)))
+    const onPick = (id) => (list.some((m) => m.id === id) ? pick(id) : Atlas.anatomyGo(id));
+    const start3d = () => makeViewer($("#mus-3d"), { onPick })
       .then((v) => v && v.loaded.then((ok) => { if (ok) { v.setFade(true); showMuscle(byId[S.muscle], figs); } }));
-    if (S.dim === "3d") start3d();
-    $("#mus-dim").addEventListener("click", (e) => {
-      const b = e.target.closest("[data-dim]"); if (!b || b.dataset.dim === S.dim) return;
-      S.dim = b.dataset.dim;
-      Atlas.setDim(S.dim);
-      $("#mus-dim").querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-      $("#mus-3d").hidden = $("#v3d-tools").hidden = $(".v3d-credit").hidden = S.dim !== "3d";
-      $("#mus-figs").hidden = S.dim !== "2d";
-      if (S.dim === "3d" && !$("#mus-3d").childElementCount) start3d();
-      showMuscle(byId[S.muscle], figs);
-    });
-    $("#v3d-tools").addEventListener("click", (e) => { const b = e.target.closest("[data-side]"); if (b && viewer) viewer.view(b.dataset.side); });
-    $("#v3d-tools").addEventListener("change", (e) => {
-      if (!viewer) return;
-      const t = e.target;
-      if (t.dataset.layer) viewer.setLayer(t.dataset.layer, t.checked);
-      else if (t.id === "v3d-sup") viewer.setDepth(t.checked ? "superficial" : "all");
-      else if (t.id === "v3d-fade") viewer.setFade(t.checked);
-    });
+    bindFigures("mus", start3d, () => showMuscle(byId[S.muscle], figs));
     const renderList = (q = "") => {
       const ql = q.trim().toLowerCase();
       $("#mus-items").innerHTML = REGIONS.map(([label, regs]) => {
@@ -213,20 +251,26 @@ Atlas.views = Atlas.views || {};
     pick(S.muscle);
   }
 
-  function showMuscle(m, figs) {
-    const v = viewer;
-    if (S.dim === "3d" && v) v.loaded.then((ok) => ok && v.focusMuscle(m.id, { side: m.v }));
-    const pts = pointsOver(m);
+  /* A muscle's line of pull, and the points and channels over it, on the 2D figure it is drawn on; null clears them. */
+  function drawFigures(m, figs) {
+    const pts = m ? pointsOver(m) : [];
     const chs = [...new Set(pts.map((id) => Atlas.POINTS[id].ch).filter(Boolean))];
     figs.forEach((f) => {
       f.clearOverlay();
-      const on = f.view === m.v;
-      f.host.classList.toggle("fig-dim", !on);
+      const on = Boolean(m) && f.view === m.v;
+      f.host.classList.toggle("fig-dim", Boolean(m) && !on);
       f.showChannels(new Set(on ? chs : []));
       f.highlight(on ? chs : [], on ? pts : []);
       f.filterPoints((p) => on && pts.includes(p.id));
       if (on) drawLine(f, m); else f.zoomTo(Atlas.REGIONS.full);
     });
+    return { pts, chs };
+  }
+
+  function showMuscle(m, figs) {
+    const v = viewer;
+    if (S.dim === "3d" && v) v.loaded.then((ok) => ok && v.focusMuscle(m.id, { side: m.v }));
+    const { pts, chs } = drawFigures(m, figs);
     const kata = kataFor(pts), moves = movesFor(m);
     const row = (k, v) => v ? `<div class="oia"><span class="eyebrow">${k}</span><p>${esc(v)}</p></div>` : "";
     $("#mus-card").innerHTML = `
@@ -236,6 +280,7 @@ Atlas.views = Atlas.views || {};
       ${row("Origin", m.o)}${row("Insertion", m.i)}${row("Action", m.a)}${row("Nerve", m.nerve)}
       ${!m.o && !m.i ? `<p class="muted" style="margin:0">The book names this muscle without giving its attachments.</p>` : ""}
       ${m.note ? `<div class="note-box">${esc(m.note)}</div>` : ""}
+      ${fromPlates([m.plate, ...(RELATED_PLATES[m.id] || [])])}
       ${S.dim === "3d" ? pull3d(m)
         : m.v ? `<p class="muted pull-why">A muscle pulls its insertion (I) toward its origin (O). The band on the ${m.v} figure shows that line of pull.</p>`
         : `<p class="muted pull-why">Not drawn on the figure: it is internal or too small to place.</p>`}
@@ -255,21 +300,54 @@ Atlas.views = Atlas.views || {};
   }
 
   /* ---------- Bones and joints ---------- */
+  /* The study guide leaves out the individual bones of the hands and feet (Handbook 4.54). */
+  const NOT_ON_EXAM = new Set(["Scaphoid", "Lunate", "Triquetrum", "Pisiform", "Trapezium", "Trapezoid", "Capitate", "Hamate",
+    "Sesamoid bones of the hand", "Talus", "Calcaneus", "Navicular", "Cuboid", "Cuneiforms (medial, intermediate, lateral)",
+    "Sesamoid bones of the foot"]);
+  /* Joints seen from behind; the rest are framed from the front. */
+  const BACK_JOINTS = /sacro-iliac|zygapophysial|costovertebral|lumbosacral|sacrococcygeal|atlanto/i;
+  /**
+   * What the 3D body shows for some landmarks: a dot on the bone for each spot, the
+   * bones or ligaments for each landmark that spans them, and the side to look from
+   * (whichever side most of them face).
+   */
+  function landmarks3d(ids) {
+    const spots = [], pieces = [], back = [];
+    ids.forEach((id) => {
+      const l = Atlas.LM3D[id];
+      if (!l) return;
+      if (l.p) spots.push({ p: l.p, label: Atlas.LANDMARKS[id].n });
+      else pieces.push(...l.parts);
+      back.push(l.p ? l.p[5] < 0 : l.v === "back");
+    });
+    return { spots, pieces, view: back.filter(Boolean).length * 2 > back.length ? "back" : "front" };
+  }
+
   function bones() {
+    S.dim = Atlas.dim();
+    /* Hiding the dots lets you find a landmark on the bare bone first; one picked from the card still shows. */
+    let marks = Atlas.store.get("anatMarks", true);
     $("#anat-body").innerHTML = `
       <div class="anat-grid">
         <div class="rail panel">
-          <button class="chip" id="palp-btn" type="button" aria-pressed="false">Palpable landmarks (Handbook 4.6)</button>
-          <p class="muted anat-count">The exam skips the individual carpals and tarsals (Handbook 4.53).</p>
+          <button class="chip" id="palp-btn" type="button" aria-pressed="false">Palpable landmarks (Handbook 4.64)</button>
+          <p class="muted anat-count">${Atlas.examOnly()
+            ? `${Atlas.BONES.length - NOT_ON_EXAM.size} bones. The exam leaves out the individual carpals, tarsals and sesamoids (Handbook 4.54).`
+            : `All ${Atlas.BONES.length} bones, including the carpals, tarsals and sesamoids the exam leaves out (Handbook 4.54).`}</p>
           <div id="bone-items" class="anat-list">${BONE_REGIONS.map(([label, regs]) => {
-            const bs = Atlas.BONES.filter((b) => regs.includes(b.region));
+            const bs = Atlas.BONES.filter((b) => regs.includes(b.region) && !(Atlas.examOnly() && NOT_ON_EXAM.has(b.name)));
             return bs.length ? `<h4>${label}</h4>${bs.map((b) => `<button data-bone="${esc(b.name)}">${esc(b.name)}</button>`).join("")}` : "";
           }).join("")}</div>
         </div>
-        <div class="figures" id="bone-figs"></div>
+        ${figColumn("bone", `
+          <label><input type="checkbox" data-layer="muscles"> Muscles</label>
+          <label><input type="checkbox" data-layer="joints"> Ligaments</label>`,
+          `<label class="v3d-opt"><input type="checkbox" id="bone-marks" ${marks ? "checked" : ""}> Landmarks</label>`)}
         <div class="panel anat-card" id="bone-card"></div>
       </div>`;
     const figs = figures($("#bone-figs"));
+    /* What is on show, so a switch between 3D and 2D redraws it: palp, a bone, a landmark or a joint. */
+    let sel = { kind: "palp" };
     /* Labels sit on the side of each dot away from the group's center, so pairs like the condyles don't collide. */
     const mark = (ids) => figs.forEach((f) => {
       f.clearOverlay(); f.showChannels(new Set()); f.filterPoints(() => false); f.host.classList.remove("fig-dim");
@@ -281,48 +359,109 @@ Atlas.views = Atlas.views || {};
         el("text", { x: x + (left ? -8 : 8), y: y + 3, "text-anchor": left ? "end" : "start" }, g).textContent = lm.n;
       });
     });
-    const setPressed = (sel) => {
-      $("#palp-btn").setAttribute("aria-pressed", String(sel === "palp"));
-      $("#bone-items").querySelectorAll("[data-bone]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.bone === sel)));
+    const zoom2d = (ids) => {
+      if (!ids.length) { figs.forEach((f) => f.zoomTo(Atlas.REGIONS.full)); return; }
+      const pts = ids.map(at), xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]), pad = 50;
+      figs.forEach((f) => f.zoomTo([Math.min(...xs) - pad, Math.min(...ys) - pad, Math.max(...xs) - Math.min(...xs) + 2 * pad, Math.max(...ys) - Math.min(...ys) + 2 * pad]));
+    };
+    const palpIds = Object.keys(Atlas.LANDMARKS).filter((k) => Atlas.LANDMARKS[k].palp);
+    const boneIds = (name) => Object.keys(Atlas.LANDMARKS).filter((k) => Atlas.LANDMARKS[k].b === name);
+    function draw() {
+      const side = sel.side || "L";
+      const shown = (ids) => (marks || sel.kind === "lm" ? ids : []);
+      if (S.dim === "2d") {
+        const ids = sel.kind === "palp" ? palpIds : sel.kind === "bone" ? boneIds(sel.name) : sel.kind === "lm" ? [sel.id] : [];
+        mark(shown(ids));
+        if (sel.kind === "palp") zoom2d([]); else if (sel.kind === "bone") zoom2d(ids);
+        return;
+      }
+      const v = viewer;
+      if (!v) return;
+      let spec;
+      if (sel.kind === "palp") spec = { spots: shown(landmarks3d(palpIds).spots) };
+      else if (sel.kind === "bone") {
+        const { spots, view } = landmarks3d(boneIds(sel.name));
+        spec = { pieces: Atlas.BONE3D[sel.name], spots: shown(spots), both: true, side, view };
+      } else if (sel.kind === "lm") {
+        const { spots, pieces, view } = landmarks3d([sel.id]);
+        /* Every landmark the panel lists sits on a listed bone; soft tissue (fascia, retinacula) never appears here. */
+        spec = { pieces: pieces.length ? pieces : Atlas.BONE3D[Atlas.LANDMARKS[sel.id].b], spots, side, view };
+      } else {
+        const j = Atlas.JOINT3D[sel.name], view = BACK_JOINTS.test(sel.name) ? "back" : "front";
+        /* A joint shows its ligaments; the cranial sutures and others with none in the model light their bones. */
+        spec = { pieces: j.parts.length ? j.parts : j.bones, side, view };
+      }
+      v.loaded.then((ok) => { if (!ok) return; v.focusAnatomy(spec); if (sel.kind === "palp") v.view("front"); });
+    }
+    const start3d = () => makeViewer($("#bone-3d"), { onBone: pickPiece })
+      .then((v) => v && v.loaded.then((ok) => { if (ok) { v.setGhost(true); v.setLayer("muscles", false); draw(); } }));
+    bindFigures("bone", start3d, draw);
+    $("#bone-marks").addEventListener("change", (e) => {
+      marks = e.target.checked;
+      Atlas.store.set("anatMarks", marks);
+      draw();
+    });
+
+    const setPressed = (key) => {
+      $("#palp-btn").setAttribute("aria-pressed", String(key === "palp"));
+      $("#bone-items").querySelectorAll("[data-bone]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.bone === key)));
     };
     function showPalp() {
       setPressed("palp");
-      const ids = Object.keys(Atlas.LANDMARKS).filter((k) => Atlas.LANDMARKS[k].palp);
-      mark(ids);
-      figs.forEach((f) => f.zoomTo(Atlas.REGIONS.full));
-      $("#bone-card").innerHTML = `<span class="eyebrow">Handbook 4.6</span><h3 class="lens-muscle">Palpable landmarks</h3>
+      sel = { kind: "palp" };
+      draw();
+      $("#bone-card").innerHTML = `<span class="eyebrow">Handbook 4.64</span><h3 class="lens-muscle">Palpable landmarks</h3>
         <p style="margin:0">The bony landmarks the handbook expects you to find by touch. Pick one to see what attaches to it.</p>
-        <div class="anat-list">${ids.map((k) => `<button data-lm="${k}">${esc(Atlas.LANDMARKS[k].n)}</button>`).join("")}</div>
+        <p class="muted" style="margin:0">The handbook's list also names a calcaneal spur, which is an abnormal growth, and the maxillary sinus, an air space beside the nose; neither is marked here.</p>
+        <div class="anat-list">${palpIds.map((k) => `<button data-lm="${k}">${esc(Atlas.LANDMARKS[k].n)}</button>`).join("")}</div>
         <div id="lm-out"></div>`;
     }
-    function showBone(name) {
+    function showBone(name, side = "L") {
       setPressed(name);
+      sel = { kind: "bone", name, side };
+      draw();
       const b = Atlas.BONES.find((x) => x.name === name);
-      const ids = Object.keys(Atlas.LANDMARKS).filter((k) => Atlas.LANDMARKS[k].b === name);
-      mark(ids);
-      if (ids.length) {
-        const pts = ids.map(at), xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]), pad = 50;
-        figs.forEach((f) => f.zoomTo([Math.min(...xs) - pad, Math.min(...ys) - pad, Math.max(...xs) - Math.min(...xs) + 2 * pad, Math.max(...ys) - Math.min(...ys) + 2 * pad]));
-      } else figs.forEach((f) => f.zoomTo(Atlas.REGIONS.full));
+      const ids = boneIds(name);
       const key = name.split(/[ (]/)[0].toLowerCase();
       const joints = Atlas.JOINTS.filter((j) => (j.bones || []).some((x) => x.toLowerCase().includes(key)));
       const attach = Atlas.MUSCLES.filter((m) => m.v && [...m.ol, ...m.il].some((id) => Atlas.LANDMARKS[id].b === name) && inPool(m));
+      const shared = Atlas.BONE3D[name].includes("Hip bone.l") && name !== "Coxal (hip) bone";
       $("#bone-card").innerHTML = `
         <span class="eyebrow">${esc(b.region)}</span><h3 class="lens-muscle">${esc(b.name)}</h3><div class="src">Netter plate ${esc(b.plate)}</div>
         ${b.notes ? `<p style="margin:0">${esc(b.notes)}</p>` : ""}
+        ${shared ? `<p class="muted" style="margin:0">The 3D model's hip bone is one piece, so the whole hip bone lights; the dots mark this part.</p>` : ""}
+        ${!Atlas.BONE3D[name].length ? `<p class="muted" style="margin:0">Not in the 3D model.</p>` : ""}
         ${(b.landmarks || []).length ? `<div class="d-section"><h4>Landmarks</h4><div class="chips">${b.landmarks.map((l) => `<span class="chip">${esc(l)}</span>`).join("")}</div></div>` : ""}
-        ${attach.length ? `<div class="d-section"><h4>Muscles that attach here${S.exam ? " (exam list)" : ""}</h4><div class="chips">${attach.map(muscleChip).join("")}</div></div>` : ""}
-        ${joints.map(jointCard).join("")}`;
+        ${ids.length ? `<div class="d-section"><h4>Find on the body</h4><div class="chips">${ids.map((k) => `<button class="chip" data-lm="${k}">${esc(Atlas.LANDMARKS[k].n)}</button>`).join("")}</div><div id="lm-out"></div></div>` : ""}
+        ${attach.length ? `<div class="d-section"><h4>Muscles that attach here${Atlas.examOnly() ? " (exam list)" : ""}</h4><div class="chips">${attach.map(muscleChip).join("")}</div></div>` : ""}
+        ${joints.map(jointCard).join("")}
+        ${fromPlates([b.plate, ...(RELATED_PLATES[name] || []), ...joints.map((j) => j.plate)])}`;
+    }
+    /* A click on the 3D skeleton picks that bone, on the side clicked. Teeth and cartilages have no entry. */
+    function pickPiece(piece) {
+      const left = piece.replace(/\.r$/, ".l");
+      const name = Object.keys(Atlas.BONE3D).find((k) => Atlas.BONE3D[k].includes(left));
+      if (!name) return;
+      showBone(name, piece.endsWith(".r") ? "R" : "L");
+      const b = $("#bone-items").querySelector(`[data-bone="${CSS.escape(name)}"]`);
+      if (b) b.scrollIntoView({ block: "nearest" });
     }
     $("#palp-btn").addEventListener("click", showPalp);
     $("#bone-items").addEventListener("click", (e) => { const b = e.target.closest("[data-bone]"); if (b) showBone(b.dataset.bone); });
     $("#bone-card").addEventListener("click", (e) => {
+      const jb = e.target.closest("[data-joint]");
+      if (jb) {
+        sel = { kind: "joint", name: jb.dataset.joint, side: sel.side };
+        if (S.dim === "2d") $("#bone-dim [data-dim='3d']").click(); else draw();
+        return;
+      }
       const b = e.target.closest("[data-lm]"); if (!b) return;
       const id = b.dataset.lm;
       $("#bone-card").querySelectorAll("[data-lm]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
       const ms = Atlas.MUSCLES.filter((m) => m.v && [...m.ol, ...m.il].includes(id));
       $("#lm-out").innerHTML = `<div class="d-section"><h4>Attaches here</h4>${ms.length ? `<div class="chips">${ms.map(muscleChip).join("")}</div>` : `<p class="muted" style="margin:0">No muscle in this atlas is placed on it.</p>`}</div>`;
-      mark([id]);
+      sel = { kind: "lm", id, side: sel.side };
+      draw();
     });
     showPalp();
   }
@@ -330,55 +469,21 @@ Atlas.views = Atlas.views || {};
   function jointCard(j) {
     const exam = /knee \(tibiofemoral\)/i.test(j.name);
     return `<div class="joint">
-      <div class="card-top"><h4>${esc(j.name)}</h4>${exam ? `<span class="exam-tag" title="Handbook 4.53">Exam: knee structure</span>` : ""}</div>
+      <div class="card-top"><h4>${esc(j.name)}</h4>${exam ? `<span class="exam-tag" title="Handbook 4.54">Exam: knee structure</span>` : ""}</div>
       <p class="muted" style="margin:0">${esc(j.type || "")} · plate ${esc(j.plate)}</p>
       ${(j.movements || []).length ? `<p style="margin:0"><b>Moves:</b> ${esc(j.movements.join(", "))}</p>` : ""}
       ${(j.ligaments || []).length ? `<p style="margin:0"><b>Ligaments and structures:</b> ${esc(j.ligaments.join(", "))}</p>` : ""}
       ${j.notes ? `<p style="margin:0">${esc(j.notes)}</p>` : ""}
+      <div><button class="chip" data-joint="${esc(j.name)}">Show on the 3D body</button></div>
     </div>`;
   }
 
-  /* ---------- Plates checklist ---------- */
-  function plates() {
-    const done = new Set(Atlas.store.get("plates", []));
-    const info = Object.fromEntries(Atlas.PLATES.map((p) => [p.id, p]));
-    const assigned = new Set(Atlas.ASSIGNMENTS.flatMap((c) => c.plates.map((p) => p.id)));
-    const extra = Atlas.PLATES.filter((p) => !assigned.has(p.id));
-    const item = (p) => {
-      const d = info[p.id], ms = Atlas.MUSCLES.filter((m) => m.plate === p.id), bs = Atlas.BONES.filter((b) => b.plate === p.id);
-      const head = `<label class="plate-row"><input type="checkbox" data-plate="${p.id}" ${done.has(p.id) ? "checked" : ""}> <span class="plate-id">${p.id}</span> ${esc(p.t)}</label>`;
-      if (!d) return `<li>${head}</li>`;
-      return `<li><details>${`<summary>${head}</summary>`}
-        <p>${esc(d.d)}</p>
-        ${bs.length ? `<p class="muted" style="margin:0">Bones: ${esc(bs.map((b) => b.name).join(", "))}</p>` : ""}
-        ${ms.length ? `<div class="chips">${ms.map(muscleChip).join("")}</div>` : ""}
-        ${(d.clin || []).map((c) => `<div class="note-box"><b>${esc(c.t)}.</b> ${esc(c.d)}</div>`).join("")}
-      </details></li>`;
-    };
-    const progress = (ids) => { const n = ids.filter((id) => done.has(id)).length; return `<span class="muted">${n} of ${ids.length}</span>`; };
-    $("#anat-body").innerHTML = `
-      <p class="muted lens-lede">The coloring assignments from Handbook 4.52, class by class. Tick a plate when you have colored it; your ticks stay in this browser. Chapter 2 and 3 plates open to a summary of what they teach.</p>
-      <div class="plate-cols">${Atlas.ASSIGNMENTS.map((c) => `
-        <section class="panel"><div class="card-top"><h3>${esc(c.c)}</h3>${progress(c.plates.map((p) => p.id))}</div>
-          <ul class="plate-list">${c.plates.map(item).join("")}</ul></section>`).join("")}
-        <section class="panel"><div class="card-top"><h3>Other chapter 2 and 3 plates</h3>${progress(extra.map((p) => p.id))}</div>
-          <ul class="plate-list">${extra.map((p) => item({ id: p.id, t: p.t })).join("")}</ul></section>
-      </div>`;
-    /* Re-rendering replaces .plate-cols, so this listener goes with it. */
-    $(".plate-cols").addEventListener("change", (e) => {
-      const c = e.target.closest("[data-plate]"); if (!c) return;
-      if (c.checked) done.add(c.dataset.plate); else done.delete(c.dataset.plate);
-      Atlas.store.set("plates", [...done]);
-      const open = [...document.querySelectorAll(".plate-list details[open] [data-plate]")].map((x) => x.dataset.plate);
-      plates();
-      open.forEach((id) => { const d = document.querySelector(`[data-plate="${id}"]`); if (d) d.closest("details").open = true; });
-    });
-  }
-
   /* ---------- Quiz ---------- */
-  const Q = { mode: "name", right: 0, total: 0, q: null };
+  const Q = { mode: "name", right: 0, total: 0, q: null, figs: [] };
   function quiz() {
+    S.dim = Atlas.dim();
     $("#anat-body").innerHTML = `
+      <div class="anat-quiz-grid">
       <div class="panel anat-quiz">
         <div class="card-top">
           <div class="seg" id="aq-mode" role="group" aria-label="Quiz type">
@@ -387,7 +492,13 @@ Atlas.views = Atlas.views || {};
           <span class="muted" id="aq-score">${Q.right} of ${Q.total}</span>
         </div>
         <div id="aq"></div>
+      </div>
+      ${figColumn("aq", "")}
       </div>`;
+    Q.figs = figures($("#aq-figs"));
+    /* quiet: hovering must not name the muscle the question is about. */
+    bindFigures("aq", () => makeViewer($("#aq-3d"), { quiet: true })
+      .then((v) => v && v.loaded.then((ok) => { if (ok) { v.setFade(true); showQ(); } })), showQ);
     $("#aq-mode").addEventListener("click", (e) => {
       const b = e.target.closest("[data-q]"); if (!b) return;
       Q.mode = b.dataset.q; Q.right = Q.total = 0;
@@ -398,6 +509,7 @@ Atlas.views = Atlas.views || {};
       const b = e.target.closest("[data-opt]");
       if (b && !Q.q.done) answer(Number(b.dataset.opt));
       if (e.target.closest("#aq-next")) next();
+      if (e.target.closest("#aq-hint")) { Q.q.shown = true; showQ(); }
     });
     next();
   }
@@ -413,20 +525,46 @@ Atlas.views = Atlas.views || {};
     const others = shuffle(same.length >= 3 ? same : pool.filter((x) => x !== m))
       .filter((x) => Q.mode === "name" || (!used.has(x.a) && used.add(x.a))).slice(0, 3);
     const opts = shuffle([m, ...others]);
-    Q.q = { m, opts, done: false };
+    /* Naming the muscle from its picture would be too easy, so that mode keeps it hidden until asked. */
+    Q.q = { m, opts, done: false, shown: Q.mode === "action" };
     $("#aq").innerHTML = Q.mode === "name"
       ? `<p class="aq-prompt">Which muscle is this?</p>
          <div class="oia"><span class="eyebrow">Origin</span><p>${mask(m.o, m)}</p></div>
          <div class="oia"><span class="eyebrow">Insertion</span><p>${mask(m.i, m)}</p></div>
          <div class="oia"><span class="eyebrow">Action</span><p>${mask(m.a, m)}</p></div>
-         <div class="aq-opts">${opts.map((o, k) => `<button class="btn ghost" data-opt="${k}">${esc(o.n)}</button>`).join("")}</div>`
+         <div class="aq-opts">${opts.map((o, k) => `<button class="btn ghost" data-opt="${k}">${esc(o.n)}</button>`).join("")}</div>
+         <div><button class="chip" id="aq-hint" type="button">Show on the body</button></div>`
       : `<p class="aq-prompt">What does <b>${esc(m.n)}</b> do?</p>
          <p class="muted" style="margin:0">Origin: ${esc(m.o)}. Insertion: ${esc(m.i)}.</p>
          <div class="aq-opts">${opts.map((o, k) => `<button class="btn ghost" data-opt="${k}">${esc(o.a)}</button>`).join("")}</div>`;
+    $("#aq").insertAdjacentHTML("beforeend", `<p class="muted aq-where" id="aq-where"></p>`);
+    showQ();
+  }
+  /* The figure beside the question: blank until the muscle is shown, then the muscle and its attachments. */
+  function showQ() {
+    const q = Q.q;
+    if (!q) return;
+    const m = q.shown ? q.m : null, hint = $("#aq-hint"), where = $("#aq-where");
+    if (hint) hint.hidden = q.shown;
+    if (S.dim === "2d") {
+      drawFigures(m, Q.figs);
+      where.textContent = m && !m.v ? "This muscle isn't drawn on the 2D figure; switch to 3D." : "";
+      return;
+    }
+    const v = viewer;
+    if (!v) return;
+    v.loaded.then((ok) => {
+      if (!ok || Q.q !== q) return;
+      v.focusMuscle(m ? m.id : null, { side: m && m.v });
+      if (!m) v.view("front");
+      where.textContent = m && !v.map[m.id] ? "This muscle isn't in the 3D model; switch to 2D." : m ? "Orange: the muscle. Red: origin. Blue: insertion." : "";
+    });
   }
   function answer(k) {
     const { m, opts } = Q.q, ok = opts[k] === m;
     Q.q.done = true; Q.total++; if (ok) Q.right++;
+    Q.q.shown = true;
+    showQ();
     $("#aq-score").textContent = `${Q.right} of ${Q.total}`;
     $("#aq").querySelectorAll("[data-opt]").forEach((b) => {
       const o = opts[Number(b.dataset.opt)];

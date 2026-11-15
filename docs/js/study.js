@@ -38,7 +38,7 @@ Atlas.views = Atlas.views || {};
   Atlas.views.study = function () {
     const root = $("#view-study");
     const S = {
-      mode: "locate", course: true, q: null, right: 0, total: 0, streak: 0, best: Atlas.store.get("best", 0), answered: false,
+      mode: "locate", course: Atlas.examOnly(), q: null, right: 0, total: 0, streak: 0, best: Atlas.store.get("best", 0), answered: false,
       deckMode: Atlas.store.get("deck", false), deck: [], deckSize: 0, round: { right: 0, missed: [] }, done: false,
     };
     root.innerHTML = `
@@ -51,7 +51,7 @@ Atlas.views = Atlas.views || {};
               <button data-m="function" aria-pressed="false">Function</button><button data-m="channel" aria-pressed="false">Channel</button>
             </div>
             <div class="chips" style="align-items:center;gap:14px">
-              <label class="toggle"><input type="checkbox" id="study-course" checked> Course points only</label>
+              ${Atlas.scopeSwitch("Exam: quiz on the points the course names. Everything adds the classical points.")}
               <label class="toggle"><input type="checkbox" id="study-deck"> Every point once</label>
               <button class="btn ghost" id="study-reset" type="button">Reset score</button>
             </div>
@@ -277,7 +277,7 @@ Atlas.views = Atlas.views || {};
       if (S.deckMode) newRound();
       next();
     });
-    $("#study-course").addEventListener("change", (e) => { S.course = e.target.checked; if (S.deckMode) newRound(); next(); });
+    document.addEventListener("scopechange", (e) => { S.course = e.detail; if (S.deckMode) newRound(); next(); });
     $("#study-deck").checked = S.deckMode;
     $("#study-deck").addEventListener("change", (e) => {
       S.deckMode = e.target.checked;
