@@ -501,6 +501,16 @@ rect.d-mv { stroke: none; fill: var(--accent); opacity: 0.85; }
 .v3d-tools { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 13.5px; }
 .v3d-tools[hidden] { display: none; }
 .v3d-tools label, .v3d-opt { display: inline-flex; gap: 5px; align-items: center; }
+.v3d-peel { display: inline-flex; gap: 6px; align-items: center; }
+.v3d-peel input { width: 96px; }
+.v3d-peel output { min-width: 6.5em; color: var(--muted); }
+.peel-step {
+  width: 28px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: 50%;
+  background: var(--surface); color: var(--ink); font-size: 18px; line-height: 1; cursor: pointer;
+}
+.peel-step:hover:not(:disabled) { background: var(--surface-2); }
+.peel-step:disabled { opacity: 0.35; cursor: default; }
+@media (pointer: coarse) { .peel-step { width: 40px; height: 40px; } }
 .v3d-opt { font-size: 13.5px; }
 .v3d-host { height: calc(100vh - 230px); min-height: 420px; }
 .v3d-host[hidden] { display: none; }

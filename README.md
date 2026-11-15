@@ -72,8 +72,10 @@ choice applies across the site.
     can show all 188 muscles. Each muscle shows its origin, insertion, action and
     nerve, and the channels, points and kata steps over it
   - a 3D body you can rotate, which highlights the chosen muscle with its origin and
-    insertion on the bones, peels away to the deep muscles, and shows the ligaments.
-    Click any muscle on the model to open it. A 2D toggle shows its line of pull on
+    insertion on the bones, and shows the ligaments. A **Peel** slider removes the
+    muscles layer by layer, from the surface to the deepest, and **Hide on click** lets
+    you remove single muscles that are in the way. Otherwise, click any muscle on
+    the model to open it. A 2D toggle shows its line of pull on
     the flat figure instead
   - bones and joints on the 3D skeleton: pick a bone, or click one on the model, to
     light it and mark its landmarks; the palpable landmarks from Handbook 4.64 are

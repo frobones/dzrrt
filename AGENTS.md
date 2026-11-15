@@ -368,6 +368,7 @@ Then open `http://localhost:8765`. `.claude/launch.json` defines the same server
 | `docs/js/figure3d.js` | Loads the viewer, wraps it in the 2D figure's methods (`Atlas.Figure3D`), and holds the shared 2D/3D choice |
 | `docs/js/data/body-3d.js` | Generated 3D positions for the points, channel paths, kata regions and kata back lines |
 | `docs/js/data/anatomy-3d.js` | Generated: where each Anatomy landmark sits on the 3D bones, and which model pieces make up each bone and joint |
+| `docs/js/data/anatomy-layers.js` | Hand-written: each muscle's layer (0 surface to 3 deepest) for the Peel slider; the book's order where its groups name layers, general anatomy elsewhere |
 | `docs/vendor/three-0.186.1/` | three.js 0.186.1 (MIT) with its glTF and Draco loaders, orbit controls, and the Draco decoder (Apache-2.0) |
 | `docs/js/search.js` | The header search: builds an index of points, channels, kata steps, muscles, bones, landmarks and joints, and opens a result through `Atlas.go` |
 | `docs/vendor/fuse-7.5.0/` | Fuse.js 7.5.0 (Apache-2.0), the basic build, for typo-tolerant name matching in search |
