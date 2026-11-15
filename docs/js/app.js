@@ -373,6 +373,7 @@ window.Atlas = window.Atlas || {};
       <div class="d-section"><h4>Connection web</h4>${webSVG(p)}
         <div class="legend">${WEB_KINDS.map(([k, t]) => `<span><svg class="web-key" viewBox="0 0 24 8" aria-hidden="true"><path class="edge edge-${k}" d="M1,4 H23"/>${k === "pair" ? '<path class="edge edge-pair-gap" d="M1,4 H23"/>' : ""}</svg>${t}</span>`).join("")}</div>
         <div class="legend web-phases"><span>Dot color = Five Phase:</span>${Object.values(Atlas.ELEMENTS).map((e) => `<span><b class="web-dot" style="color:var(${e.color})"></b>${e.name}</span>`).join("")}<span><b class="web-dot" style="color:var(--extra)"></b>Du / Ren</span><span><b class="web-dot hollow"></b>No phase (kata step)</span></div>
+        ${Atlas.shapeKey(["point", "channel", "phase", "emotion", "kata"])}
         <button class="chip" id="cx-open" style="margin-top:8px">Explore its connections →</button></div>
       ${ch ? `<div class="d-section"><h4>${esc(ch.name)} channel</h4>${Atlas.channelFacts(p.ch)}</div>` : ""}`;
     const solo = $("#solo", box);
@@ -429,20 +430,20 @@ window.Atlas = window.Atlas || {};
     const add = (n) => { if (!nodes.some((m) => m.key === n.key) && nodes.length < 18) nodes.push(n); };
     if (p.ch) {
       const ch = Atlas.CHANNELS[p.ch];
-      add({ key: "ch" + p.ch, label: `${p.ch} channel`, ch: p.ch, kind: "channel", col: Atlas.elColor(p.ch) });
-      if (ch.el) add({ key: "el", label: Atlas.ELEMENTS[ch.el].name, view: "phases", kind: "channel", col: `var(${Atlas.ELEMENTS[ch.el].color})` });
-      if (ch.pair) add({ key: "ch" + ch.pair, label: ch.pair, sub: "partner channel", ch: ch.pair, kind: "channel", col: Atlas.elColor(ch.pair) });
+      add({ key: "ch" + p.ch, label: `${p.ch} channel`, ch: p.ch, kind: "channel", type: "channel", col: Atlas.elColor(p.ch) });
+      if (ch.el) add({ key: "el", label: Atlas.ELEMENTS[ch.el].name, view: "phases", kind: "channel", type: "phase", col: `var(${Atlas.ELEMENTS[ch.el].color})` });
+      if (ch.pair) add({ key: "ch" + ch.pair, label: ch.pair, sub: "partner channel", ch: ch.pair, kind: "channel", type: "channel", col: Atlas.elColor(ch.pair) });
     }
-    (p.combos || []).forEach((c) => Atlas.POINTS[c.w] && add({ key: c.w, label: code(c.w), sub: c.n, pt: c.w, kind: "pair", col: Atlas.pointColor(Atlas.POINTS[c.w]) }));
-    Object.values(Atlas.POINTS).forEach((q) => (q.combos || []).forEach((c) => c.w === p.id && add({ key: q.id, label: code(q.id), sub: c.n, pt: q.id, kind: "pair", col: Atlas.pointColor(q) })));
+    (p.combos || []).forEach((c) => Atlas.POINTS[c.w] && add({ key: c.w, label: code(c.w), sub: c.n, pt: c.w, kind: "pair", type: "point", col: Atlas.pointColor(Atlas.POINTS[c.w]) }));
+    Object.values(Atlas.POINTS).forEach((q) => (q.combos || []).forEach((c) => c.w === p.id && add({ key: q.id, label: code(q.id), sub: c.n, pt: q.id, kind: "pair", type: "point", col: Atlas.pointColor(q) })));
     for (const k in Atlas.PHASES.emotions) {
       const e = Atlas.PHASES.emotions[k];
-      if (e.pts.includes(p.id)) add({ key: "emo" + k, label: e.e, view: "phases", kind: "emotion", col: `var(${Atlas.ELEMENTS[k].color})` });
+      if (e.pts.includes(p.id)) add({ key: "emo" + k, label: e.e, view: "phases", kind: "emotion", type: "emotion", col: `var(${Atlas.ELEMENTS[k].color})` });
     }
-    kataSteps(p.id).slice(0, 3).forEach((s) => add({ key: "k" + s.n, label: `Step ${s.n}`, kata: Atlas.KATA.indexOf(s), kind: "kata", col: "var(--muted)", hollow: true }));
-    (p.rel || []).forEach((r) => Atlas.POINTS[r] && add({ key: r, label: code(r), pt: r, kind: "related", col: Atlas.pointColor(Atlas.POINTS[r]) }));
+    kataSteps(p.id).slice(0, 3).forEach((s) => add({ key: "k" + s.n, label: `Step ${s.n}`, kata: Atlas.KATA.indexOf(s), kind: "kata", type: "kata", col: "var(--muted)", hollow: true }));
+    (p.rel || []).forEach((r) => Atlas.POINTS[r] && add({ key: r, label: code(r), pt: r, kind: "related", type: "point", col: Atlas.pointColor(Atlas.POINTS[r]) }));
     if (p.cats.includes("longlife")) Object.values(Atlas.POINTS).filter((q) => q.cats.includes("longlife") && q.id !== p.id)
-      .forEach((q) => add({ key: q.id, label: code(q.id), sub: "Long Life", pt: q.id, kind: "related", col: Atlas.pointColor(q) }));
+      .forEach((q) => add({ key: q.id, label: code(q.id), sub: "Long Life", pt: q.id, kind: "related", type: "point", col: Atlas.pointColor(q) }));
 
     const R = 112, n = nodes.length || 1;
     const parts = nodes.map((nd, i) => {
@@ -455,8 +456,7 @@ window.Atlas = window.Atlas || {};
       const d = `M0,0 Q${cx.toFixed(1)},${cy.toFixed(1)} ${x.toFixed(1)},${y.toFixed(1)}`;
       /* A point pairing is a double line: a wide stroke with a surface-colored stroke down its middle. */
       return `<path class="edge edge-${nd.kind}" d="${d}"/>${nd.kind === "pair" ? `<path class="edge edge-pair-gap" d="${d}"/>` : ""}
-        <g class="node" ${data} tabindex="0"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="7" fill="var(--surface)" stroke="${nd.col}"/>
-        ${nd.hollow ? "" : `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="${nd.col}"/>`}
+        <g class="node" ${data} tabindex="0"><title>${esc(nd.label)}, ${Atlas.nodeTypeName(nd.type)}</title>${Atlas.nodeShape(nd.type, x, y, 7, nd.col, nd.hollow)}
         <text x="${lx.toFixed(1)}" y="${(ly + 3).toFixed(1)}" text-anchor="${anchor}">${esc(nd.label)}</text>
         ${nd.sub ? `<text x="${lx.toFixed(1)}" y="${(ly + 13).toFixed(1)}" text-anchor="${anchor}" style="fill:var(--muted);font-size:7.5px">${esc(nd.sub)}</text>` : ""}</g>`;
     }).join("");

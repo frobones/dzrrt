@@ -25,12 +25,15 @@ Atlas.views = Atlas.views || {};
 
   /* ---------- Shared drawing ---------- */
   const edgePath = (d, kind) => `<path class="edge edge-${kind}" d="${d}"/>${kind === "pair" ? `<path class="edge edge-pair-gap" d="${d}"/>` : ""}`;
-  const dot = (n, x, y, r = 7) => `<circle cx="${x}" cy="${y}" r="${r}" fill="var(--surface)" stroke="${n.col}"/>${n.hollow ? "" : `<circle cx="${x}" cy="${y}" r="${(r * 0.43).toFixed(1)}" fill="${n.col}"/>`}`;
+  const dot = (n, x, y, r = 7) => Atlas.nodeShape(n.type, x, y, r, n.col, n.hollow);
+  const glyph = (n) => Atlas.nodeGlyph(n.type, n.col, n.hollow);
+  const typeName = (n) => { const t = Atlas.nodeTypeName(n.type); return t[0].toUpperCase() + t.slice(1); };
   function legend() {
     const kinds = Atlas.LINK_KINDS.map(([k, t]) => `<span><svg class="web-key" viewBox="0 0 24 8" aria-hidden="true">${edgePath("M1,4 H23", k)}</svg>${t}</span>`).join("");
     const phases = Object.values(Atlas.ELEMENTS).map((e) => `<span><b class="web-dot" style="color:var(${e.color})"></b>${e.name}</span>`).join("");
     return `<div class="legend">${kinds}</div>
-      <div class="legend web-phases"><span>Dot color = Five Phase:</span>${phases}<span><b class="web-dot" style="color:var(--extra)"></b>Du / Ren</span><span><b class="web-dot hollow"></b>No phase (kata step, muscle)</span></div>`;
+      <div class="legend web-phases"><span>Color = Five Phase:</span>${phases}<span><b class="web-dot" style="color:var(--extra)"></b>Du / Ren</span><span><b class="web-dot hollow"></b>No phase (kata step, muscle)</span></div>
+      ${Atlas.shapeKey(Atlas.NODE_TYPES)}`;
   }
   const typeTag = (n) => Atlas.nodeTypeName(n.type);
 
@@ -107,9 +110,9 @@ Atlas.views = Atlas.views || {};
       case "muscle": return Atlas.muscleFacts(Atlas.MUSCLES.find((m) => m.id === id));
       case "kata": return Atlas.kataFacts(Number(id)) + Atlas.kataReminder;
       case "phase": return Atlas.phaseFacts(id);
-      case "channel": return `<span class="eyebrow">Channel</span><h3 class="lens-muscle">${esc(n.label)}</h3>
+      case "channel": return `<h3 class="lens-muscle">${esc(n.label)}</h3>
         <p class="muted" style="margin:0">${Atlas.channelMeta(id)}</p>${Atlas.channelFacts(id)}`;
-      case "emotion": return `<span class="eyebrow">Emotion · ${Atlas.ELEMENTS[id].name}</span><h3 class="lens-muscle">${esc(n.label)}</h3>${Atlas.emotionFacts(id)}`;
+      case "emotion": return `<span class="eyebrow">${Atlas.ELEMENTS[id].name} phase</span><h3 class="lens-muscle">${esc(n.label)}</h3>${Atlas.emotionFacts(id)}`;
     }
   }
   function cardHTML(key) {
@@ -120,11 +123,12 @@ Atlas.views = Atlas.views || {};
         .sort((x, y) => nodes.get(Atlas.otherEnd(x, key)).label.localeCompare(nodes.get(Atlas.otherEnd(y, key)).label));
       return es.length ? `<div class="d-section"><h4>${t}</h4><div class="chips">${es.map((e) => {
         const nb = nodes.get(Atlas.otherEnd(e, key));
-        return `<button class="chip" data-pick="${esc(nb.key)}" title="${esc(e.label)}">${esc(nb.label)}${nb.type === "point" ? ` <span class="muted">${esc(nb.sub || "")}</span>` : ""}</button>`;
+        return `<button class="chip" data-pick="${esc(nb.key)}" title="${esc(typeName(nb))}: ${esc(e.label)}">${glyph(nb)}${esc(nb.label)}${nb.type === "point" ? ` <span class="muted">${esc(nb.sub || "")}</span>` : ""}</button>`;
       }).join("")}</div></div>` : "";
     }).join("");
     const here = C.mode === "explore";
     return `${Atlas.sheetBar("Close the details")}
+      <div class="cx-type">${glyph(c)}${esc(typeName(c))}</div>
       ${factsHTML(c)}
       <p class="muted" style="margin:0">${links.length} link${links.length === 1 ? "" : "s"}. ${here ? "Click any of them to make it the center." : C.mode === "sky" ? "Pick one to light it up." : "Pick one to see its links."}</p>
       <div class="chips">${here ? "" : `<button class="btn" data-ck="${esc(key)}">Explore from here</button>`}
@@ -175,7 +179,7 @@ Atlas.views = Atlas.views || {};
       const d = `M0,0 Q${(x * 0.45).toFixed(1)},${(y * 0.45 + 10).toFixed(1)} ${x.toFixed(1)},${y.toFixed(1)}`;
       return `${edgePath(d, e.kind)}
         <g class="node" data-ck="${esc(nb.key)}" tabindex="0" role="button" aria-label="${esc(nb.label)}, ${esc(typeTag(nb))}: ${esc(e.label)}">
-          <title>${esc(nb.label)} · ${esc(e.label)}</title><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="16" fill="transparent" stroke="none"/>${dot(nb, x.toFixed(1), y.toFixed(1))}
+          <title>${esc(nb.label)} · ${esc(e.label)}</title><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="16" fill="transparent" stroke="none"/>${dot(nb, x, y)}
           <text x="${lx.toFixed(1)}" y="${(ly + 3).toFixed(1)}" text-anchor="${anchor}">${esc(short(nb.label))}</text></g>`;
     }).join("");
     const trail = C.trail.map((k) => nodes.get(k)).filter(Boolean);
@@ -188,10 +192,11 @@ Atlas.views = Atlas.views || {};
       <p class="cx-error" id="cx-error" role="alert"></p>
       <div class="cx-explore">
         <div class="panel cx-stage">
-          ${trail.length ? `<nav class="cx-trail" aria-label="Where you have been">${trail.map((t) => `<button class="chip" data-ck="${esc(t.key)}">${esc(t.label)}</button>`).join('<span aria-hidden="true">›</span>')}<span aria-hidden="true">›</span><b>${esc(c.label)}</b></nav>` : ""}
+          ${trail.length ? `<nav class="cx-trail" aria-label="Where you have been">${trail.map((t) => `<button class="chip" data-ck="${esc(t.key)}">${glyph(t)}${esc(t.label)} <span class="muted">${esc(Atlas.nodeTypeName(t.type))}</span></button>`).join('<span aria-hidden="true">›</span>')}<span aria-hidden="true">›</span><b>${glyph(c)} ${esc(c.label)}</b> <span class="muted">${esc(Atlas.nodeTypeName(c.type))}</span></nav>` : ""}
           <svg class="web cx-web" viewBox="-290 -215 580 430" role="img" aria-label="${esc(c.label)} and the ${links.length} things linked to it">${ring}
-            <circle r="24" fill="${c.hollow ? "var(--surface)" : c.col}" stroke="${c.col}" stroke-width="2"/>
-            <text class="center-text" text-anchor="middle" y="4" style="fill:${c.hollow ? "var(--ink)" : "var(--surface)"}">${esc(c.label.length > 7 ? c.label.split(" ")[0].slice(0, 7) : c.label)}</text></svg>
+            <g class="cx-center">${dot(c, 0, 0, 16)}
+              <text class="center-text halo" text-anchor="middle" y="44">${esc(c.label)}</text>
+              <text class="center-type halo" text-anchor="middle" y="57">${esc(Atlas.nodeTypeName(c.type))}</text></g></svg>
           ${links.length > MAX_RING ? `<p class="muted" style="margin:0;font-size:12.5px">${links.length - MAX_RING} more links are listed beside the web.</p>` : ""}
           ${legend()}
         </div>
@@ -251,7 +256,7 @@ Atlas.views = Atlas.views || {};
     if (C.from === C.to) { box.innerHTML = `<p class="muted">Pick two different things.</p>`; return; }
     if (!C.routes.length) { box.innerHTML = `<p class="muted">These two aren't linked by anything in the atlas.</p>`; return; }
     const r = C.routes[C.route % C.routes.length];
-    const pill = (k) => { const n = nodes.get(k); return `<button class="cx-pill${k === C.sel ? " on" : ""}" data-pick="${esc(k)}" style="--c:${n.col}"><b class="web-dot ${n.hollow ? "hollow" : ""}" style="color:${n.col}"></b>${esc(n.label)}<small>${esc(typeTag(n))}</small></button>`; };
+    const pill = (k) => { const n = nodes.get(k); return `<button class="cx-pill${k === C.sel ? " on" : ""}" data-pick="${esc(k)}" style="--c:${n.col}">${glyph(n)}${esc(n.label)}<small>${esc(typeTag(n))}</small></button>`; };
     const steps = r.map((s, i) => (i ? `<span class="cx-step"><svg class="web-key" viewBox="0 0 24 8" aria-hidden="true">${edgePath("M1,4 H23", s.edge.kind)}</svg>${esc(s.edge.label)}</span>` : "") + pill(s.key)).join("");
     box.innerHTML = `
       <p class="muted" style="margin:0">${r.length - 1} link${r.length === 2 ? "" : "s"} apart${C.routes.length > 1 ? ` · route ${C.route % C.routes.length + 1} of ${C.routes.length}${C.routes.length === 6 ? "+" : ""}` : ""}. Pick any step to see its links.</p>
@@ -305,7 +310,8 @@ Atlas.views = Atlas.views || {};
     for (let i = 0; i < 300; i++) sim.tick();
     return { list, links, byKey: new Map(list.map((n) => [n.key, n])) };
   }
-  const R = { phase: 16, channel: 9, emotion: 7, point: 4.5, kata: 3.5, muscle: 3.5 };
+  /* About how far across each kind is drawn; the phase circle is drawn 1.45 times this. */
+  const R = { phase: 11, channel: 7, emotion: 7, point: 4.5, kata: 3.5, muscle: 3.5 };
   function constellation() {
     $("#cx-body").innerHTML = `
       <div class="cx-split">
@@ -331,8 +337,8 @@ Atlas.views = Atlas.views || {};
     const xs = list.map((n) => n.x), ys = list.map((n) => n.y), pad = 40;
     const box = [Math.min(...xs) - pad, Math.min(...ys) - pad, Math.max(...xs) - Math.min(...xs) + 2 * pad, Math.max(...ys) - Math.min(...ys) + 2 * pad];
     const lines = links.map((l) => `<line class="edge edge-${l.kind}" data-a="${esc(l.source.key)}" data-b="${esc(l.target.key)}" x1="${l.source.x.toFixed(1)}" y1="${l.source.y.toFixed(1)}" x2="${l.target.x.toFixed(1)}" y2="${l.target.y.toFixed(1)}"/>`).join("");
-    const dots = list.map((n) => `<g class="node sky-${n.type}" data-k="${esc(n.key)}" tabindex="-1">${dot(n, n.x.toFixed(1), n.y.toFixed(1), R[n.type])}
-      <text class="sky-label" x="${n.x.toFixed(1)}" y="${(n.y - R[n.type] - 4).toFixed(1)}" text-anchor="middle">${esc(n.label)}</text></g>`).join("");
+    const dots = list.map((n) => `<g class="node sky-${n.type}" data-k="${esc(n.key)}" tabindex="-1">${dot(n, n.x, n.y, R[n.type])}
+      <text class="sky-label" x="${n.x.toFixed(1)}" y="${(n.y - R[n.type] * (n.type === "phase" ? 1.45 : 1.2) - 4).toFixed(1)}" text-anchor="middle">${esc(n.label)}</text></g>`).join("");
     const host = $("#cx-sky");
     host.innerHTML = `<svg class="web cx-sky-svg" viewBox="${box.join(" ")}" role="img" aria-label="Constellation of ${list.length} linked things">
       <g class="sky-lines">${lines}</g><g class="sky-dots">${dots}</g></svg>

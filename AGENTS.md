@@ -391,6 +391,8 @@ The Connections card shows each item's facts through the same functions its home
 uses: `Atlas.pointParts`, `Atlas.channelMeta` and `Atlas.channelFacts` (`app.js`),
 `Atlas.muscleFacts` (`anatomy.js`), and `Atlas.kataFacts`, `Atlas.phaseFacts` and
 `Atlas.emotionFacts` (`views.js`). Change a card's facts there, not in either view.
+Both webs draw each kind of node with `Atlas.nodeShape` (`graph.js`): shape is the kind of
+thing and color is the Five Phase, explained by `Atlas.shapeKey`.
 
 Deep links open one thing in its tab: `#p-<point>`, `#ch-<channel>`, `#kata-<step>`,
 `#m-<muscle>`, `#bone-<name>`, `#lm-<landmark>`, `#joint-<name>` and `#c-<node>`, a

@@ -35,7 +35,7 @@ and one choice applies across the site.
     - what the course says, with page references
     - its traditional actions and cautions
     - its classical pairings
-    - a web of everything it connects to
+    - a web of everything it connects to, in the same shapes and colors as Connections
 - **Kata.** Steps through the 60-step kata. Each step turns the body to the working
   area, on the correct side, and highlights the channels and points under your hands.
   The three back lines of steps 1 and 3 are drawn in both 2D and 3D.
@@ -94,7 +94,10 @@ and one choice applies across the site.
   - the Atlas point panel lists the muscles under each point
 - **Connections.** Everything the site links together, as one web: points, channels,
   the Five Phases, emotions, kata steps and the muscles under the points. Line style
-  shows the kind of link and dot color the Five Phase.
+  shows the kind of link, color the Five Phase, and shape the kind of thing: a circle
+  for a point, a square for a muscle, a diamond for a kata step, a bar for a channel,
+  a triangle for an emotion and a large circle for a phase. Cards, chips and the trail
+  name the kind as well.
   - Explore: type a name in **Start from** to put anything at the center with
     everything linked to it, then click a neighbor to walk to it. A trail takes you
     back. Each Atlas point panel opens here too.
