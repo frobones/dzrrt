@@ -61,12 +61,18 @@ Atlas.views = Atlas.views || {};
     draw();
   };
 
-  /** Open Explore centered on a node key (deep link #c-<key>). */
+  /**
+   * Open Explore centered on a node key (deep link #c-<key>, or Back and Forward). Going back
+   * to a node on the trail trims the trail there; going forward to a neighbor extends it.
+   */
   Atlas.connectionsGo = (key) => {
-    if (!Atlas.graph().nodes.has(key)) return;
+    const { nodes, adj } = Atlas.graph();
+    if (!nodes.has(key)) return;
+    const at = C.trail.indexOf(key);
+    if (at >= 0) C.trail = C.trail.slice(0, at);
+    else if (key !== C.center) C.trail = adj.get(C.center).some((e) => Atlas.otherEnd(e, C.center) === key) ? [...C.trail, C.center].slice(-8) : [];
     C.mode = "explore";
     C.center = key;
-    C.trail = [];
     draw();
   };
 
@@ -75,7 +81,7 @@ Atlas.views = Atlas.views || {};
     if (C.mode === "explore" && key !== C.center) C.trail = [...C.trail.filter((k) => k !== C.center), C.center].slice(-8);
     C.mode = "explore";
     C.center = key;
-    history.replaceState(null, "", "#c-" + encodeURIComponent(key));
+    Atlas.setHash("c-" + encodeURIComponent(key));
     draw();
   }
 

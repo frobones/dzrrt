@@ -183,17 +183,21 @@ Atlas.views = Atlas.views || {};
       if (!byId[arg]) return;
       S.muscle = arg;
       if (!byId[arg].exam) Atlas.setExam(false);
+      /* Back and Forward within the open panel reselect without rebuilding it and its 3D body. */
+      if (S.panel === "muscles" && S.reselect && S.reselect(arg)) return;
       panel("muscles");
       return;
     }
     const bone = arg.bone || (arg.lm ? Atlas.LANDMARKS[arg.lm].b : jointHome(arg.joint));
     if (!Atlas.boneOnExam(bone)) Atlas.setExam(false);
+    if (S.panel === "bones" && S.reselect && S.reselect({ ...arg, bone })) return;
     S.pending = { ...arg, bone };
     panel("bones");
   };
 
   function panel(p) {
     S.panel = p;
+    S.reselect = null; // each panel sets its own
     $("#anat-panels").querySelectorAll("[data-p]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.p === p)));
     viewerRequest++;
     dropViewer();
@@ -253,7 +257,7 @@ Atlas.views = Atlas.views || {};
         <div class="panel anat-card" id="mus-card"></div>
       </div>`;
     const figs = figures($("#mus-figs"));
-    const onPick = (id) => (list.some((m) => m.id === id) ? pick(id) : Atlas.anatomyGo(id));
+    const onPick = (id) => (list.some((m) => m.id === id) ? userPick(id) : Atlas.go("anatomy", id));
     /* The Show all button counts the muscles hidden by click. */
     const onHidden = (n) => {
       $("#mus-showall").hidden = !n;
@@ -295,9 +299,12 @@ Atlas.views = Atlas.views || {};
       $("#mus-items").querySelectorAll("[data-mid]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mid === id)));
       showMuscle(byId[id], figs);
     };
+    /* A muscle you pick is a step for the Back button; Back reselects it through S.reselect. */
+    const userPick = (id) => { pick(id); Atlas.setHash("m-" + id); };
+    S.reselect = (id) => list.some((m) => m.id === id) && (pick(id), true);
     renderList();
     $("#mus-q").addEventListener("input", (e) => renderList(e.target.value));
-    $("#mus-items").addEventListener("click", (e) => { const b = e.target.closest("[data-mid]"); if (b) pick(b.dataset.mid); });
+    $("#mus-items").addEventListener("click", (e) => { const b = e.target.closest("[data-mid]"); if (b) userPick(b.dataset.mid); });
     pick(S.muscle);
   }
 
@@ -520,11 +527,16 @@ Atlas.views = Atlas.views || {};
       const name = Object.keys(Atlas.BONE3D).find((k) => Atlas.BONE3D[k].includes(left));
       if (!name) return;
       showBone(name, piece.endsWith(".r") ? "R" : "L");
+      Atlas.setHash("bone-" + encodeURIComponent(name));
       const b = $("#bone-items").querySelector(`[data-bone="${CSS.escape(name)}"]`);
       if (b) b.scrollIntoView({ block: "nearest" });
     }
-    $("#palp-btn").addEventListener("click", showPalp);
-    $("#bone-items").addEventListener("click", (e) => { const b = e.target.closest("[data-bone]"); if (b) showBone(b.dataset.bone); });
+    /* What you pick here is a step for the Back button: the palpable list is the tab itself. */
+    $("#palp-btn").addEventListener("click", () => { showPalp(); Atlas.setHash("anatomy"); });
+    $("#bone-items").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-bone]");
+      if (b) { showBone(b.dataset.bone); Atlas.setHash("bone-" + encodeURIComponent(b.dataset.bone)); }
+    });
     /* Joints show on the 3D body only, so picking one in 2D switches the tab to 3D. */
     function showJoint(name) {
       sel = { kind: "joint", name, side: sel.side };
@@ -541,18 +553,20 @@ Atlas.views = Atlas.views || {};
     }
     $("#bone-card").addEventListener("click", (e) => {
       const jb = e.target.closest("[data-joint]");
-      if (jb) { showJoint(jb.dataset.joint); return; }
+      if (jb) { showJoint(jb.dataset.joint); Atlas.setHash("joint-" + encodeURIComponent(jb.dataset.joint)); return; }
       const b = e.target.closest("[data-lm]");
-      if (b) selectLandmark(b.dataset.lm);
+      if (b) { selectLandmark(b.dataset.lm); Atlas.setHash("lm-" + b.dataset.lm); }
     });
     /* A deep link (Atlas.anatomyGo) names what to open; otherwise start on the palpable landmarks. */
-    const go = S.pending;
-    S.pending = null;
-    if (go) {
+    const open = (go) => {
       showBone(go.bone);
       if (go.lm) selectLandmark(go.lm);
       else if (go.joint) showJoint(go.joint);
-    } else showPalp();
+    };
+    S.reselect = (go) => { open(go); return true; };
+    const go = S.pending;
+    S.pending = null;
+    if (go) open(go); else showPalp();
     const picked = $("#bone-items [aria-pressed='true']");
     if (picked) picked.scrollIntoView({ block: "nearest" });
   }
