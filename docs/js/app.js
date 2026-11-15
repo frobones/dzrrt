@@ -103,9 +103,26 @@ window.Atlas = window.Atlas || {};
   }
   /* On a phone the header and controls fill the first screen, so opening one thing scrolls to its figure. */
   const FIGURE_OF = { atlas: "#view-atlas .stage", kata: "#view-kata .kata-figure", anatomy: "#anat-body .anat-figcol", connections: "#cx-body" };
+  /* The tab a deep link opens, from its prefix; a bare tab name is that tab. */
+  const PREFIX_VIEW = [["p-", "atlas"], ["ch-", "atlas"], ["kata-", "kata"], ["m-", "anatomy"], ["bone-", "anatomy"], ["lm-", "anatomy"], ["joint-", "anatomy"], ["c-", "connections"]];
+  const viewOf = (h) => (PREFIX_VIEW.find(([pre]) => h.startsWith(pre)) || [null, h])[1];
+  let shownHash = null; // the hash the page shows now, so one navigation is handled once
+
+  /**
+   * Record where the page is in the address, as a new step for the browser's Back button.
+   * replace overwrites the current step instead: for automatic moves such as kata Play. The
+   * first pick on a bare tab address (#kata) also replaces it, so a tab click and a pick are
+   * one step back, not two.
+   */
+  Atlas.setHash = function (hash, replace = false) {
+    if (location.hash === "#" + hash) return;
+    const cur = location.hash.slice(1) || "atlas";
+    if (replace || (VIEWS.includes(cur) && viewOf(hash) === cur)) history.replaceState(null, "", "#" + hash);
+    else history.pushState(null, "", "#" + hash);
+    shownHash = location.hash;
+  };
   Atlas.go = function (view, arg) {
-    const hash = hashFor(view, arg);
-    if (location.hash !== "#" + hash) history.replaceState(null, "", "#" + hash);
+    Atlas.setHash(hashFor(view, arg));
     show(view, arg);
     const narrow = window.matchMedia("(max-width: 800px)").matches;
     const fig = narrow && arg !== undefined && arg !== null && FIGURE_OF[view] && $(FIGURE_OF[view]);
@@ -114,6 +131,7 @@ window.Atlas = window.Atlas || {};
     else window.scrollTo({ top: 0, behavior: "smooth" });
   };
   function fromHash() {
+    shownHash = location.hash;
     const h = location.hash.slice(1);
     if (h.startsWith("p-")) return show("atlas", h.slice(2));
     if (h.startsWith("kata-")) return show("kata", Number(h.slice(5)));
@@ -285,7 +303,7 @@ window.Atlas = window.Atlas || {};
     const p = Atlas.POINTS[id];
     A.figs.forEach((f) => { f.select(id); f.highlight(p.ch ? [p.ch] : [], [id]); });
     if (zoom && A.dim === "2d") A.figs2d.forEach((f) => f.zoomToPoint(id));
-    if (push) history.replaceState(null, "", "#p-" + id);
+    if (push) Atlas.setHash("p-" + id);
     renderDetail(id);
     /* On a phone the details would sit two screens below the figures, so they slide up over them. */
     if (push || zoom) Atlas.openSheet($("#detail"));
@@ -468,7 +486,10 @@ window.Atlas = window.Atlas || {};
   Atlas.views = Atlas.views || {};
   window.addEventListener("DOMContentLoaded", () => {
     initTheme();
-    window.addEventListener("hashchange", fromHash);
+    /* Back and Forward fire popstate, and a tab link also fires hashchange; handle each move once. */
+    const onNav = () => { if (location.hash !== shownHash) fromHash(); };
+    window.addEventListener("popstate", onNav);
+    window.addEventListener("hashchange", onNav);
     fromHash();
   });
 })();

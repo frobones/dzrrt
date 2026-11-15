@@ -94,13 +94,14 @@ Atlas.views = Atlas.views || {};
       $("#k-next").onclick = () => go(i + 1);
       $("#k-play").onclick = () => {
         if (timer) { clearInterval(timer); timer = null; }
-        else timer = setInterval(() => { if (i >= Atlas.KATA.length - 1) { clearInterval(timer); timer = null; render(); } else go(i + 1); }, 3200);
+        else timer = setInterval(() => { if (i >= Atlas.KATA.length - 1) { clearInterval(timer); timer = null; render(); } else go(i + 1, true); }, 3200);
         render();
       };
     }
-    function go(n) {
+    /* A clicked step is a step for Back; Play and the arrow keys replace it instead. */
+    function go(n, replace = false) {
       i = Math.max(0, Math.min(Atlas.KATA.length - 1, n));
-      history.replaceState(null, "", "#kata-" + i);
+      Atlas.setHash("kata-" + i, replace);
       render();
     }
     Atlas.kataGo = (n) => { if (!Number.isNaN(n)) go(n); };
@@ -112,8 +113,8 @@ Atlas.views = Atlas.views || {};
     document.addEventListener("dimchange", (e) => { if (e.detail.tab === "kata") { figView = null; render(); } });
     document.addEventListener("keydown", (e) => {
       if (!$("#view-kata").classList.contains("active") || e.target.matches("input, textarea")) return;
-      if (e.key === "ArrowRight") go(i + 1);
-      if (e.key === "ArrowLeft") go(i - 1);
+      if (e.key === "ArrowRight") go(i + 1, true);
+      if (e.key === "ArrowLeft") go(i - 1, true);
     });
     render();
   };

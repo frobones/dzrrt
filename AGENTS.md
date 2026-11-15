@@ -397,7 +397,10 @@ thing and color is the Five Phase, explained by `Atlas.shapeKey`.
 Deep links open one thing in its tab: `#p-<point>`, `#ch-<channel>`, `#kata-<step>`,
 `#m-<muscle>`, `#bone-<name>`, `#lm-<landmark>`, `#joint-<name>` and `#c-<node>`, a
 Connections node key such as `p:LI4` (names URL-encoded).
-`Atlas.go(view, arg)` builds them; search uses the same calls.
+`Atlas.go(view, arg)` builds them; search uses the same calls. Every deliberate pick is a
+step for the browser's Back button: record it with `Atlas.setHash(hash)`, which adds a
+history entry, and pass `replace` for automatic moves such as kata Play. Never call
+`history.replaceState` or `pushState` directly.
 
 The Atlas, Study, Anatomy and Connections pages carry an Exam | Everything switch
 (`Atlas.scopeSwitch()`); the choice is site-wide (`Atlas.examOnly()`, event

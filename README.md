@@ -13,6 +13,9 @@ the triceps. Close spellings count too, so "gastrocnemus" still finds the muscle
 Picking a result opens it in its own tab, selected, zoomed and highlighted, in that
 tab's 2D or 3D figure.
 
+The browser's **Back** and **Forward** buttons retrace what you picked: each point,
+muscle, bone, kata step, Connections walk and tab you opened is one step.
+
 **On a phone**, the tabs sit in one row you swipe sideways. One finger scrolls the page
 and two fingers move, zoom and turn the figures; on the 3D body, double-tap a spot to
 center on it. A point's details slide up from the bottom of the screen.
