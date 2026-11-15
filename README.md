@@ -26,7 +26,7 @@ choice applies across the site.
   points that link the channels. A 3D toggle shows a body you can turn, with the
   points on the muscle surface. Atlas and Kata start in 2D and Anatomy in 3D; each tab
   remembers your choice.
-  - Filter by channel, point type, or search.
+  - Filter the points by channel, point type, or text ("headache" shows every headache point).
   - Switch between the primary and sinew channel layers, and watch the direction of Qi
     flow: moving dashes in 2D, arrowheads travelling along the channels in 3D.
   - Point names appear as you zoom in, or all the time with **Always show labels**.

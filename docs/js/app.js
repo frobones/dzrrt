@@ -144,8 +144,9 @@ window.Atlas = window.Atlas || {};
       <p class="view-intro">Every point the course names, plus the classical points that tie the channels together. Click a point to see where it is, what it does, what the course says about it, and everything it connects to. Filled dots are course points; a ring marks a Long Life point. Moving dashes show the direction Qi flows.</p>
       <div class="atlas">
         <aside class="rail">
-          <div class="panel"><label class="eyebrow" for="q">Search</label>
-            <input id="q" class="search" type="search" placeholder="LI4, Hegu, headache, anger…" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
+          <div class="panel"><label class="eyebrow" for="q">Filter points</label>
+            <input id="q" class="search" type="search" placeholder="headache, LI4, anger…" aria-describedby="q-hint" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+            <p class="muted" id="q-hint" style="font-size:12.5px;margin:6px 0 0">Shows only the matching points on the body.</p></div>
           <div class="panel">
             <h3>Layer</h3>
             <div class="seg" id="layer">
