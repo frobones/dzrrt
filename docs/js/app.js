@@ -39,7 +39,7 @@ window.Atlas = window.Atlas || {};
   }
 
   /* ---------- Routing ---------- */
-  const VIEWS = ["atlas", "kata", "clock", "phases", "depth", "study", "lenses"];
+  const VIEWS = ["atlas", "kata", "clock", "phases", "depth", "study", "lenses", "terms"];
   const inited = {};
   function show(view, arg) {
     if (!VIEWS.includes(view)) view = "atlas";

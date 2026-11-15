@@ -285,11 +285,13 @@ Then open `http://localhost:8765`. `.claude/launch.json` defines the same server
 | `docs/js/data/kata.js` | The 60 kata steps and the zoom regions |
 | `docs/js/data/theory.js` | Five Phases, emotions, pain types, channel layers, depth zones |
 | `docs/js/data/lenses.js` | Two Lenses content: ground rules, frame shifts, complaints, muscle map, terms |
+| `docs/js/data/terms.js` | Body Terms content: positions, directions, planes, movements, glossary (Handbook 4.5-4.7) |
 | `docs/js/body.js` | The body figure: silhouette, channels, points, zoom and pan |
 | `docs/js/app.js` | Routing, the Atlas view, and the point detail panel |
 | `docs/js/views.js` | Kata, Body Clock, Five Phases, and Depth views |
 | `docs/js/study.js` | The quiz modes |
 | `docs/js/lenses.js` | The Two Lenses view |
+| `docs/js/terms.js` | The Body Terms view and its movement diagrams |
 
 Scripts are classic (not ES modules) and share one global, `window.Atlas`. Load order
 in `index.html` matters: data first, then `body.js`, then the views.
