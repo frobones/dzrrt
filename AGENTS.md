@@ -387,6 +387,11 @@ replacing the versioned `docs/vendor/three-<version>/` folder and the import map
 **Graph layout uses d3-force only**; the Constellation loads it on first open.
 `search.js` likewise imports Fuse.js on first use; **fuzzy matching uses Fuse.js only**.
 
+The Connections card shows each item's facts through the same functions its home tab
+uses: `Atlas.pointParts`, `Atlas.channelMeta` and `Atlas.channelFacts` (`app.js`),
+`Atlas.muscleFacts` (`anatomy.js`), and `Atlas.kataFacts`, `Atlas.phaseFacts` and
+`Atlas.emotionFacts` (`views.js`). Change a card's facts there, not in either view.
+
 Deep links open one thing in its tab: `#p-<point>`, `#ch-<channel>`, `#kata-<step>`,
 `#m-<muscle>`, `#bone-<name>`, `#lm-<landmark>`, `#joint-<name>` and `#c-<node>`, a
 Connections node key such as `p:LI4` (names URL-encoded).
