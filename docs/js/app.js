@@ -90,7 +90,7 @@ window.Atlas = window.Atlas || {};
   });
 
   /* ---------- Atlas view ---------- */
-  const A = { figs: [], figs2d: [], fig3d: null, dim: Atlas.dim(), chans: new Set(Object.keys(Atlas.CHANNELS)), cats: new Set(), course: Atlas.examOnly(), q: "", layer: "primary", sel: null };
+  const A = { figs: [], figs2d: [], fig3d: null, dim: Atlas.dim("atlas"), chans: new Set(Object.keys(Atlas.CHANNELS)), cats: new Set(), course: Atlas.examOnly(), q: "", layer: "primary", sel: null };
 
   function initAtlas() {
     const root = $("#view-atlas");
@@ -148,7 +148,7 @@ window.Atlas = window.Atlas || {};
     /* 3D shows one rotatable body in place of the two flat figures; the same filters drive both. */
     const setDim = (dim) => {
       A.dim = dim;
-      Atlas.setDim(dim);
+      Atlas.setDim("atlas", dim);
       $("#atlas-dim").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.dim === dim)));
       $("#atlas-figs").hidden = dim === "3d";
       $("#atlas-3d").hidden = dim !== "3d";
@@ -162,7 +162,6 @@ window.Atlas = window.Atlas || {};
       if (A.sel) selectPoint(A.sel, false);
     };
     $("#atlas-dim").addEventListener("click", (e) => { const b = e.target.closest("[data-dim]"); if (b && b.dataset.dim !== A.dim) setDim(b.dataset.dim); });
-    document.addEventListener("dimchange", (e) => { if (e.detail !== A.dim) setDim(e.detail); });
 
     $("#q").addEventListener("input", (e) => { A.q = e.target.value.trim().toLowerCase(); refresh(); });
     $("#layer").addEventListener("click", (e) => {

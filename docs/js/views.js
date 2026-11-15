@@ -39,7 +39,7 @@ Atlas.views = Atlas.views || {};
       const s = Atlas.KATA[i];
       const grp = Atlas.KATA_GROUPS.find((g) => g.id === s.g);
       const view = s.v || (grp.pos === "prone" ? "back" : "front");
-      const dim = Atlas.dim();
+      const dim = Atlas.dim("kata");
       $("#kata-dim").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.dim === dim)));
       $("#kata-fig").hidden = dim === "3d";
       $("#kata-3d").hidden = dim !== "3d";
@@ -96,10 +96,10 @@ Atlas.views = Atlas.views || {};
     Atlas.kataGo = (n) => { if (!Number.isNaN(n)) go(n); };
     $("#kata-list").addEventListener("click", (e) => { const b = e.target.closest("button[data-i]"); if (b) go(Number(b.dataset.i)); });
     $("#kata-dim").addEventListener("click", (e) => {
-      const b = e.target.closest("[data-dim]"); if (!b || b.dataset.dim === Atlas.dim()) return;
-      Atlas.setDim(b.dataset.dim);
+      const b = e.target.closest("[data-dim]"); if (!b || b.dataset.dim === Atlas.dim("kata")) return;
+      Atlas.setDim("kata", b.dataset.dim);
     });
-    document.addEventListener("dimchange", () => { figView = null; render(); });
+    document.addEventListener("dimchange", (e) => { if (e.detail.tab === "kata") { figView = null; render(); } });
     document.addEventListener("keydown", (e) => {
       if (!$("#view-kata").classList.contains("active") || e.target.matches("input, textarea")) return;
       if (e.key === "ArrowRight") go(i + 1);

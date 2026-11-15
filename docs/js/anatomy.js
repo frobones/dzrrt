@@ -53,7 +53,7 @@ Atlas.views = Atlas.views || {};
       <details class="plate-more"><summary>Plate ${esc(p.id)}: ${esc(p.t)}</summary><p>${esc(p.d)}</p></details>
       ${(p.clin || []).map((c) => `<div class="note-box"><b>${esc(c.t)}.</b> ${esc(c.d)}</div>`).join("")}`).join("")}</div>` : "";
   }
-  const S = { panel: "muscles", muscle: null, dim: Atlas.dim() };
+  const S = { panel: "muscles", muscle: null, dim: Atlas.dim("anatomy") };
   let viewer = null, viewerRequest = 0;
   /* The panel re-renders on a deep link or a scope change; only the newest request may keep its viewer. */
   async function makeViewer(host, opts) {
@@ -105,7 +105,7 @@ Atlas.views = Atlas.views || {};
     $(`#${id}-dim`).addEventListener("click", (e) => {
       const b = e.target.closest("[data-dim]"); if (!b || b.dataset.dim === S.dim) return;
       S.dim = b.dataset.dim;
-      Atlas.setDim(S.dim);
+      Atlas.setDim("anatomy", S.dim);
       $(`#${id}-dim`).querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
       const d3 = S.dim === "3d";
       $(`#${id}-3d`).hidden = $(`#${id}-tools`).hidden = $(`#${id}-credit`).hidden = !d3;
@@ -215,7 +215,7 @@ Atlas.views = Atlas.views || {};
 
   /* ---------- Muscles ---------- */
   function muscles() {
-    S.dim = Atlas.dim();
+    S.dim = Atlas.dim("anatomy");
     const list = Atlas.MUSCLES.filter(inPool);
     if (!S.muscle || !list.some((m) => m.id === S.muscle)) S.muscle = (list.find((m) => m.v) || list[0]).id;
     $("#anat-body").innerHTML = `
@@ -328,7 +328,7 @@ Atlas.views = Atlas.views || {};
   }
 
   function bones() {
-    S.dim = Atlas.dim();
+    S.dim = Atlas.dim("anatomy");
     /* Hiding the dots lets you find a landmark on the bare bone first; one picked from the card still shows. */
     let marks = Atlas.store.get("anatMarks", true);
     $("#anat-body").innerHTML = `
@@ -485,7 +485,7 @@ Atlas.views = Atlas.views || {};
   /* ---------- Quiz ---------- */
   const Q = { mode: "name", right: 0, total: 0, q: null, figs: [] };
   function quiz() {
-    S.dim = Atlas.dim();
+    S.dim = Atlas.dim("anatomy");
     $("#anat-body").innerHTML = `
       <div class="anat-quiz-grid">
       <div class="panel anat-quiz">

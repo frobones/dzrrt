@@ -11,10 +11,10 @@ to what the written exams cover: the points the course names, and the muscles an
 bones in the anatomy study guide (Handbook 4.54). It starts on Exam, and one
 choice applies across the site.
 
-- **Atlas.** A 3D body you can turn, with every course point plus the classical points
-  that link the channels, sitting on the muscle surface. A 2D toggle shows the flat
-  front and back figures instead, and the choice carries across the Atlas, Kata and
-  Anatomy views.
+- **Atlas.** Flat front and back figures with every course point plus the classical
+  points that link the channels. A 3D toggle shows a body you can turn, with the
+  points on the muscle surface. Atlas and Kata start in 2D and Anatomy in 3D; each tab
+  remembers your choice.
   - Filter by channel, point type, or search.
   - Switch between the primary and sinew channel layers, and watch the direction of Qi
     flow.
