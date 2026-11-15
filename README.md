@@ -6,6 +6,13 @@ each one to the kata, the Five Phases, and the course's pain and emotion materia
 
 ## Views
 
+**Search** sits in the header on every page (press `/` to jump to it). It finds points,
+channels, kata steps, muscles, bones, landmarks and joints by name, code or pinyin,
+and by what they do or attach to, so "headache" finds points and "olecranon" finds
+the triceps. Close spellings count too, so "gastrocnemus" still finds the muscle.
+Picking a result opens it in its own tab, selected, zoomed and highlighted, in that
+tab's 2D or 3D figure.
+
 An **Exam | Everything** switch on the Atlas, Study and Anatomy pages narrows each one
 to what the written exams cover: the points the course names, and the muscles and
 bones in the anatomy study guide (Handbook 4.54). It starts on Exam, and one
@@ -108,8 +115,9 @@ Neither one's text nor its images are reproduced here.
 
 ## Third-party assets
 
-The 3D view uses three.js 0.186.1 (MIT) and Google's Draco decoder (Apache-2.0), both
-copied into `docs/vendor/` with their licenses.
+The 3D view uses three.js 0.186.1 (MIT) and Google's Draco decoder (Apache-2.0), and
+search uses Fuse.js 7.5.0 (Apache-2.0), all copied into `docs/vendor/` with their
+licenses.
 
 The site loads these fonts from Google Fonts:
 

@@ -63,12 +63,40 @@ window.Atlas = window.Atlas || {};
     VIEWS.forEach((v) => { $("#view-" + v).classList.toggle("active", v === view); });
     document.querySelectorAll("nav.tabs a").forEach((a) => a.setAttribute("aria-current", a.getAttribute("href") === "#" + view ? "page" : "false"));
     if (!inited[view]) { inited[view] = true; (view === "atlas" ? initAtlas : Atlas.views[view])(); }
-    if (view === "atlas" && arg) selectPoint(arg, false);
+    if (view === "atlas" && arg && arg.ch) showChannel(arg.ch);
+    else if (view === "atlas" && arg && Atlas.POINTS[arg]) {
+      /* A classical point only shows under Everything; a search or channel filter hiding it is cleared. */
+      if (!Atlas.isCourse(Atlas.POINTS[arg])) Atlas.setExam(false);
+      if (!matches(Atlas.POINTS[arg])) {
+        A.q = "";
+        $("#q").value = "";
+        A.chans = new Set(Object.keys(Atlas.CHANNELS));
+        A.cats = new Set();
+        refresh();
+      }
+      selectPoint(arg, false, true);
+    }
     if (view === "kata" && arg !== undefined && Atlas.kataGo) Atlas.kataGo(arg);
     if (view === "anatomy" && arg && Atlas.anatomyGo) Atlas.anatomyGo(arg);
   }
+  /*
+   * Deep links: #p-<point>, #ch-<channel>, #kata-<step>, #m-<muscle>, #bone-<name>, #lm-<landmark>,
+   * #joint-<name>. The Atlas takes a point id or {ch}; Anatomy a muscle id, {bone}, {lm} or {joint}.
+   */
+  function hashFor(view, arg) {
+    if (arg === undefined || arg === null || arg === "") return view;
+    if (view === "atlas") return arg.ch ? "ch-" + arg.ch : "p-" + arg;
+    if (view === "kata") return "kata-" + arg;
+    if (view === "anatomy") {
+      if (arg.bone) return "bone-" + encodeURIComponent(arg.bone);
+      if (arg.lm) return "lm-" + arg.lm;
+      if (arg.joint) return "joint-" + encodeURIComponent(arg.joint);
+      return "m-" + arg;
+    }
+    return view;
+  }
   Atlas.go = function (view, arg) {
-    const hash = view === "atlas" && arg ? "p-" + arg : view === "kata" && arg !== undefined ? "kata-" + arg : view === "anatomy" && arg ? "m-" + arg : view;
+    const hash = hashFor(view, arg);
     if (location.hash !== "#" + hash) history.replaceState(null, "", "#" + hash);
     show(view, arg);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -78,6 +106,10 @@ window.Atlas = window.Atlas || {};
     if (h.startsWith("p-")) return show("atlas", h.slice(2));
     if (h.startsWith("kata-")) return show("kata", Number(h.slice(5)));
     if (h.startsWith("m-")) return show("anatomy", h.slice(2));
+    if (h.startsWith("ch-")) return show("atlas", { ch: h.slice(3) });
+    if (h.startsWith("bone-")) return show("anatomy", { bone: decodeURIComponent(h.slice(5)) });
+    if (h.startsWith("lm-")) return show("anatomy", { lm: h.slice(3) });
+    if (h.startsWith("joint-")) return show("anatomy", { joint: decodeURIComponent(h.slice(6)) });
     show(h || "atlas");
   }
 
@@ -229,14 +261,25 @@ window.Atlas = window.Atlas || {};
     $("#count").textContent = `${n} of ${Object.keys(Atlas.POINTS).length} points`;
   }
 
-  function selectPoint(id, push) {
+  /** zoom: frame the point on the flat figures too (the 3D body always turns to it). */
+  function selectPoint(id, push, zoom = false) {
     if (!Atlas.POINTS[id]) return;
     if (!inited.atlas) { inited.atlas = true; initAtlas(); }
     A.sel = id;
     const p = Atlas.POINTS[id];
     A.figs.forEach((f) => { f.select(id); f.highlight(p.ch ? [p.ch] : [], [id]); });
+    if (zoom && A.dim === "2d") A.figs2d.forEach((f) => f.zoomToPoint(id));
     if (push) history.replaceState(null, "", "#p-" + id);
     renderDetail(id);
+  }
+
+  /** Show one channel alone, highlighted, on the whole body. */
+  function showChannel(code) {
+    if (!Atlas.CHANNELS[code]) return;
+    if (!inited.atlas) { inited.atlas = true; initAtlas(); }
+    A.chans = new Set([code]);
+    refresh();
+    A.figs.forEach((f) => { f.highlight([code], []); f.zoomTo(Atlas.REGIONS.full); });
   }
   Atlas.selectPoint = selectPoint;
 

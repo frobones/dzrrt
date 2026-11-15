@@ -369,6 +369,8 @@ Then open `http://localhost:8765`. `.claude/launch.json` defines the same server
 | `docs/js/data/body-3d.js` | Generated 3D positions for the points, channel paths, kata regions and kata back lines |
 | `docs/js/data/anatomy-3d.js` | Generated: where each Anatomy landmark sits on the 3D bones, and which model pieces make up each bone and joint |
 | `docs/vendor/three-0.186.1/` | three.js 0.186.1 (MIT) with its glTF and Draco loaders, orbit controls, and the Draco decoder (Apache-2.0) |
+| `docs/js/search.js` | The header search: builds an index of points, channels, kata steps, muscles, bones, landmarks and joints, and opens a result through `Atlas.go` |
+| `docs/vendor/fuse-7.5.0/` | Fuse.js 7.5.0 (Apache-2.0), the basic build, for typo-tolerant name matching in search |
 | `docs/js/terms.js` | The Body Terms view and its movement diagrams |
 
 Scripts are classic (not ES modules) and share one global, `window.Atlas`. Load order
@@ -378,6 +380,11 @@ The one exception is the 3D viewer, `viewer3d.js`, an ES module that `anatomy.js
 with `import()` the first time the 3D view opens. The import map in `index.html` points
 `three` at the vendored copy. **3D rendering uses three.js only**; upgrade it by
 replacing the versioned `docs/vendor/three-<version>/` folder and the import map.
+`search.js` likewise imports Fuse.js on first use; **fuzzy matching uses Fuse.js only**.
+
+Deep links open one thing in its tab: `#p-<point>`, `#ch-<channel>`, `#kata-<step>`,
+`#m-<muscle>`, `#bone-<name>`, `#lm-<landmark>` and `#joint-<name>` (names URL-encoded).
+`Atlas.go(view, arg)` builds them; search uses the same calls.
 
 The Atlas, Study and Anatomy pages carry an Exam | Everything switch
 (`Atlas.scopeSwitch()`); the choice is site-wide (`Atlas.examOnly()`, event
